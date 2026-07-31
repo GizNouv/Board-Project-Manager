@@ -3,22 +3,20 @@ import { UserId } from '../value-objects/UserId';
 import { ValidationException } from '../exceptions/BaseExceptions';
 import { DomainConstants } from '../utils/Constants';
 
-/**
- * User aggregate root
- * Simple entity for user management
- */
 export class User extends Entity<UserId> {
   private _name: string;
   private _email: string;
+  private _password: string;
   private _createdAt: Date;
   private _updatedAt: Date;
 
-  constructor(id: UserId, name: string, email: string) {
+  constructor(id: UserId, name: string, email: string, password: string = '') {
     super(id);
     this.validateName(name);
     this.validateEmail(email);
     this._name = name.trim();
     this._email = email.trim().toLowerCase();
+    this._password = password;
     this._createdAt = new Date();
     this._updatedAt = new Date();
   }
@@ -41,6 +39,7 @@ export class User extends Entity<UserId> {
 
   get name(): string { return this._name; }
   get email(): string { return this._email; }
+  get password(): string { return this._password; }
   get createdAt(): Date { return this._createdAt; }
   get updatedAt(): Date { return this._updatedAt; }
 
@@ -53,6 +52,11 @@ export class User extends Entity<UserId> {
   public updateEmail(email: string): void {
     this.validateEmail(email);
     this._email = email.trim().toLowerCase();
+    this._updatedAt = new Date();
+  }
+
+  public setPassword(password: string): void {
+    this._password = password;
     this._updatedAt = new Date();
   }
 

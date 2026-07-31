@@ -9,7 +9,7 @@ import {
   DuplicateEntityException
 } from '../../domain';
 import { CreateUserDTO, UpdateUserDTO } from '../dto/UserDTOs';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/lib/password';
 
 export class UserApplicationService {
   constructor(private readonly userRepository: IUserRepository) {}
@@ -20,12 +20,13 @@ export class UserApplicationService {
       return ResultFactory.failure(new DuplicateEntityException('User', dto.email));
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const hashedPassword = await hashPassword(dto.password);
 
     const user = new User(
       new UserId(crypto.randomUUID()),
       dto.name,
-      dto.email
+      dto.email,
+      hashedPassword
     );
 
     return await this.userRepository.save(user);
@@ -68,5 +69,18 @@ export class UserApplicationService {
 
   async validateCredentials(email: string, password: string): Promise<Result<User>> {
     return await this.userRepository.findByEmail(email);
+  }
+
+  async updateUserPassword(userId: string, newPassword: string): Promise<Result<void>> {
+    const userResult = await this.userRepository.findById(new UserId(userId));
+    if (userResult.isFailure()) {
+      return ResultFactory.failure(userResult.error);
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+    const user = userResult.value;
+    user.setPassword(hashedPassword);
+
+    return await this.userRepository.updatePassword(new UserId(userId), hashedPassword);
   }
 }

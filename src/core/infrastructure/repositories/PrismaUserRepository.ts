@@ -12,9 +12,13 @@ import {
 import { UserMapper } from '../mappers/UserMapper';
 import { PrismaErrorMapper } from '../errors/PrismaErrorMapper';
 
+/**
+ * PrismaUserRepository - Infrastructure repository for User entities
+ * Implements IUserRepository interface using Prisma ORM
+ * Delegates all mapping to UserMapper static methods
+ * Supports find by email for authentication
+ */
 export class PrismaUserRepository implements IUserRepository {
-  private userMapper = new UserMapper();
-
   async findById(id: UserId): Promise<Result<User>> {
     try {
       const user = await prisma.user.findUnique({
@@ -25,7 +29,7 @@ export class PrismaUserRepository implements IUserRepository {
         return ResultFactory.failure(new EntityNotFoundException('User', id.toString()));
       }
 
-      return ResultFactory.success(this.userMapper.toDomain(user));
+      return ResultFactory.success(UserMapper.toDomain(user));
     } catch (error) {
       throw PrismaErrorMapper.map(error);
     }
@@ -41,7 +45,7 @@ export class PrismaUserRepository implements IUserRepository {
         return ResultFactory.failure(new EntityNotFoundException('User', email));
       }
 
-      return ResultFactory.success(this.userMapper.toDomain(user));
+      return ResultFactory.success(UserMapper.toDomain(user));
     } catch (error) {
       throw PrismaErrorMapper.map(error);
     }
@@ -53,7 +57,7 @@ export class PrismaUserRepository implements IUserRepository {
         orderBy: { createdAt: 'desc' }
       });
 
-      return ResultFactory.success(users.map(user => this.userMapper.toDomain(user)));
+      return ResultFactory.success(users.map(user => UserMapper.toDomain(user)));
     } catch (error) {
       throw PrismaErrorMapper.map(error);
     }
@@ -61,7 +65,7 @@ export class PrismaUserRepository implements IUserRepository {
 
   async save(user: User): Promise<Result<User>> {
     try {
-      const data = this.userMapper.toPersistence(user);
+      const data = UserMapper.toPersistence(user);
 
       await prisma.user.create({
         data
@@ -93,7 +97,7 @@ export class PrismaUserRepository implements IUserRepository {
 
   async update(user: User): Promise<Result<User>> {
     try {
-      const data = this.userMapper.toPersistenceUpdate(user);
+      const data = UserMapper.toPersistenceUpdate(user);
 
       await prisma.user.update({
         where: { id: user.id.toString() },
