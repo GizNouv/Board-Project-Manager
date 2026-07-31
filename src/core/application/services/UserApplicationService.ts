@@ -20,7 +20,9 @@ export class UserApplicationService {
       return ResultFactory.failure(new DuplicateEntityException('User', dto.email));
     }
 
-    const hashedPassword = await hashPassword(dto.password);
+    const hashedPassword = dto.password.startsWith('$2a$') || dto.password.startsWith('$2b$') 
+      ? dto.password 
+      : await hashPassword(dto.password);
 
     const user = new User(
       new UserId(crypto.randomUUID()),

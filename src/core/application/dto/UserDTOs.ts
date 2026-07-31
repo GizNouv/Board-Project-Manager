@@ -1,6 +1,3 @@
-/**
- * Data Transfer Objects for User operations
- */
 export interface CreateUserDTO {
   name: string;
   email: string;
