@@ -1,7 +1,6 @@
 import type { NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
-import { UserApplicationService } from '@/core/application/services/UserApplicationService';
-import { PrismaUserRepository } from '@/core/infrastructure/repositories/PrismaUserRepository';
+import { container } from '@/core/infrastructure/container';
 import { verifyPassword } from '@/lib/password';
 
 export const authConfig: NextAuthConfig = {
@@ -17,8 +16,7 @@ export const authConfig: NextAuthConfig = {
           return null;
         }
 
-        const userRepository = new PrismaUserRepository();
-        const userService = new UserApplicationService(userRepository);
+        const userService = container.userApplicationService;
 
         const result = await userService.getUserByEmail(credentials.email as string);
 
@@ -28,12 +26,7 @@ export const authConfig: NextAuthConfig = {
 
         const user = result.value;
 
-        // In a real implementation, you would retrieve the hashed password
-        // from the user record. This is a placeholder.
-        // You'll need to add a password field to your User entity and repository.
-        const hashedPassword = ''; // This should come from the user record
-
-        const isValid = await verifyPassword(credentials.password as string, hashedPassword);
+        const isValid = await verifyPassword(credentials.password as string, user.password);
 
         if (!isValid) {
           return null;

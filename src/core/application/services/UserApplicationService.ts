@@ -70,7 +70,21 @@ export class UserApplicationService {
   }
 
   async validateCredentials(email: string, password: string): Promise<Result<User>> {
-    return await this.userRepository.findByEmail(email);
+    const userResult = await this.userRepository.findByEmail(email);
+    if (userResult.isFailure()) {
+      return userResult;
+    }
+
+    const user = userResult.value;
+    const isValid = await import('@/lib/password').then(({ verifyPassword }) => 
+      verifyPassword(password, user.password)
+    );
+
+    if (!isValid) {
+      return ResultFactory.failure(new ValidationException('Invalid credentials'));
+    }
+
+    return ResultFactory.success(user);
   }
 
   async updateUserPassword(userId: string, newPassword: string): Promise<Result<void>> {
