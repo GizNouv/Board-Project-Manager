@@ -2,6 +2,11 @@ import type { NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { container } from '@/core/infrastructure/container';
 import { verifyPassword } from '@/lib/password';
+import { ROUTES } from './config/routes';
+
+const protectedRoutes = [
+  ROUTES.root,
+];
 
 export const authConfig: NextAuthConfig = {
   providers: [
@@ -44,7 +49,7 @@ export const authConfig: NextAuthConfig = {
     strategy: 'jwt',
   },
   pages: {
-    signIn: '/login',
+    signIn: ROUTES.login,
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -65,7 +70,8 @@ export const authConfig: NextAuthConfig = {
     },
     async authorized({ auth, request }) {
       const isLoggedIn = !!auth?.user;
-      const isOnLoginPage = request.nextUrl?.pathname === '/login';
+      const isOnLoginPage = request.nextUrl?.pathname === ROUTES.login || request.nextUrl?.pathname === ROUTES.register;
+      const isOnProtectedPage =  protectedRoutes.some((route) => request.nextUrl?.pathname === route)
 
       if (isOnLoginPage) {
         if (isLoggedIn) {
@@ -74,8 +80,8 @@ export const authConfig: NextAuthConfig = {
         return true;
       }
 
-      if (!isLoggedIn) {
-        return Response.redirect(new URL('/login', request.nextUrl));
+      if (!isLoggedIn && isOnProtectedPage) {
+        return Response.redirect(new URL(ROUTES.login, request.nextUrl));
       }
 
       return true;

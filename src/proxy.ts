@@ -1,24 +1,25 @@
 import { auth } from './auth';
 import { NextResponse } from 'next/server';
+import { ROUTES } from './config/routes';
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
 
   const isPublicRoute =
-    req.nextUrl.pathname.startsWith('/login') ||
-    req.nextUrl.pathname.startsWith('/register') ||
+    req.nextUrl.pathname.startsWith(ROUTES.login) ||
+    req.nextUrl.pathname.startsWith(ROUTES.register) ||
     req.nextUrl.pathname.startsWith('/api/auth');
 
   if (!isLoggedIn && !isPublicRoute) {
     return NextResponse.redirect(
-      new URL('/login', req.nextUrl)
+      new URL(ROUTES.login, req.nextUrl)
     );
   }
 
   if (
     isLoggedIn &&
-    (req.nextUrl.pathname === '/login' ||
-      req.nextUrl.pathname === '/register')
+    (req.nextUrl.pathname === ROUTES.login ||
+      req.nextUrl.pathname === ROUTES.register)
   ) {
     return NextResponse.redirect(
       new URL('/', req.nextUrl)
