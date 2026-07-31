@@ -1,15 +1,13 @@
 import { UserId } from '../value-objects/UserId';
 import { User } from '../entities/User';
+import { Result } from '../utils/Result';
 
-/**
- * IUserRepository - Repository interface for User entities
- * Demonstrates repository abstraction for different aggregates
- */
 export interface IUserRepository {
-  findById(id: UserId): Promise<User | null>;
-  findByEmail(email: string): Promise<User | null>;
-  findAll(): Promise<User[]>;
-  save(user: User): Promise<void>;
-  delete(id: UserId): Promise<void>;
-  update(user: User): Promise<void>;
+  findById(id: UserId): Promise<Result<User>>;
+  findByEmail(email: string): Promise<Result<User>>;
+  findAll(): Promise<Result<User[]>>;
+  save(user: User): Promise<Result<User>>;
+  delete(id: UserId): Promise<Result<void>>;
+  update(user: User): Promise<Result<User>>;
+  updatePassword(userId: UserId, hashedPassword: string): Promise<Result<void>>;
 }

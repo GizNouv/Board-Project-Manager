@@ -1,11 +1,12 @@
+export type {
+  ISpecification
+} from './ISpecification';
 export {
-  ISpecification,
   BaseSpecification,
   AndSpecification,
   OrSpecification,
   NotSpecification
 } from './ISpecification';
-
 export {
   TaskMovableSpecification,
   EstimateRangeSpecification,

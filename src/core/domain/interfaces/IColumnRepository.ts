@@ -1,16 +1,16 @@
 import { ColumnId } from '../value-objects/ColumnId';
 import { Column } from '../entities/Column';
 import { BoardId } from '../value-objects/BoardId';
+import { Result } from '../utils/Result';
 
-/**
- * IColumnRepository - Repository interface for Column entities
- * Demonstrates repository pattern for domain entities
- */
 export interface IColumnRepository {
-  findById(id: ColumnId): Promise<Column | null>;
-  findByBoardId(boardId: BoardId): Promise<Column[]>;
-  findAll(): Promise<Column[]>;
-  save(column: Column): Promise<void>;
-  delete(id: ColumnId): Promise<void>;
-  update(column: Column): Promise<void>;
+  findById(id: ColumnId): Promise<Result<Column>>;
+  findByBoardId(boardId: BoardId): Promise<Result<Column[]>>;
+  findAll(): Promise<Result<Column[]>>;
+  save(column: Column): Promise<Result<Column>>;
+  delete(id: ColumnId): Promise<Result<void>>;
+  update(column: Column): Promise<Result<Column>>;
+  findColumnWithTasks(id: ColumnId): Promise<Result<Column>>;
+  reorderColumn(columnId: ColumnId, newOrder: number): Promise<Result<void>>;
+  findBoardColumns(boardId: BoardId): Promise<Result<Column[]>>;
 }

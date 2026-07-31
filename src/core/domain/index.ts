@@ -23,33 +23,35 @@ export type { IColumnRepository } from './interfaces/IColumnRepository';
 export type { IBoardRepository } from './interfaces/IBoardRepository';
 
 // Exceptions
-export type {DomainError} from './exceptions'
+export type {DomainError} from './exceptions';
 export {
-    DomainException,
-    ValidationException,
-    EntityNotFoundException,
-    DuplicateEntityException,
-    InvalidStateTransitionException,
-    TaskMovementException,
-    TaskAssignmentException,
-    TaskDependencyException
+  DomainException,
+  ValidationException,
+  EntityNotFoundException,
+  DuplicateEntityException,
+  InvalidStateTransitionException,
+  TaskMovementException,
+  TaskAssignmentException,
+  TaskDependencyException
 } from './exceptions';
 
 // Events
-export type {IDomainEvent} from './events'
+export type {IDomainEvent} from './events';
 export {
-    DomainEvent,
-    TaskCreatedEvent,
-    TaskMovedEvent,
-    TaskDeletedEvent,
-    TaskReorderedEvent,
-    BoardCreatedEvent,
-    ColumnAddedEvent,
-    ColumnRemovedEvent
+  DomainEvent,
+  TaskCreatedEvent,
+  TaskMovedEvent,
+  TaskDeletedEvent,
+  TaskReorderedEvent,
+  BoardCreatedEvent,
+  ColumnAddedEvent,
+  ColumnRemovedEvent
 } from './events';
 
 // Specifications
-export type {ISpecification} from './specifications'
+export type {
+  ISpecification
+} from './specifications/ISpecification';
 export {
   BaseSpecification,
   AndSpecification,
@@ -72,7 +74,7 @@ export { TaskFactory, TaskType, type TaskCreationParams } from './factories/Task
 // Validators
 export { DomainValidator } from './validators/DomainValidator';
 
-// Utils
-export type {Result} from './utils/Result'
+// Utils 
+export type {Result} from './utils/Result';
 export { Success, Failure, ResultFactory } from './utils/Result';
 export { DomainConstants } from './utils/Constants';
