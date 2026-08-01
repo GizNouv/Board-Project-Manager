@@ -18,10 +18,9 @@ export class BoardApplicationService {
   constructor(
     private readonly boardRepository: IBoardRepository,
     private readonly columnRepository: IColumnRepository
-  ) { }
+  ) {}
 
   async createBoard(dto: CreateBoardDTO): Promise<Result<Board>> {
-    // Validate input
     if (!dto.title || dto.title.trim().length === 0) {
       return ResultFactory.failure(new ValidationException('Board title is required'));
     }
@@ -30,14 +29,12 @@ export class BoardApplicationService {
       return ResultFactory.failure(new ValidationException('Board title must not exceed 100 characters'));
     }
 
-    // Create board entity
     const board = new Board(
       new BoardId(crypto.randomUUID()),
       dto.title,
       new UserId(dto.ownerId)
     );
 
-    // Save to repository
     return await this.boardRepository.save(board);
   }
 
@@ -51,6 +48,10 @@ export class BoardApplicationService {
 
   async getBoardsByUser(userId: string): Promise<Result<Board[]>> {
     return await this.boardRepository.findByUserId(new UserId(userId));
+  }
+
+  async getBoardsByOwner(ownerId: string): Promise<Result<Board[]>> {
+    return await this.boardRepository.findByUserId(new UserId(ownerId));
   }
 
   async getFirstBoardByUser(userId: string): Promise<Result<Board>> {
