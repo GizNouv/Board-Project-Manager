@@ -12,17 +12,17 @@ interface ProvidersProps {
 
 export function Providers({ children, session }: ProvidersProps) {
     return (
-        <SessionProvider session={session}>
-            <ThemeProvider
-                attribute="class"
-                defaultTheme="system"
-                enableSystem
-                disableTransitionOnChange
-            >
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+        >
+            <SessionProvider session={session}>
                 <TooltipProvider>
                     {children}
                 </TooltipProvider>
-            </ThemeProvider>
-        </SessionProvider>
+            </SessionProvider>
+        </ThemeProvider>
     );
 }
