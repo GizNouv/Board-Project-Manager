@@ -1,6 +1,6 @@
-# Trello Clone
+# Board Project Manager
 
-A Trello-inspired project management application built with Next.js 16, React 19, TypeScript, and modern web technologies.
+A project management application built with Next.js 16, React 19, TypeScript, and modern web technologies.
 
 ## Tech Stack
 
