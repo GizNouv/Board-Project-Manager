@@ -8,7 +8,7 @@ export default function LoginPage() {
     <AuthCard
       title="Welcome back"
       description="Sign in to your account to continue"
-      footer={<div>If you have no account: <Link className='text-muted-foreground' href={ROUTES.register}>Create Account</Link></div>}
+      footer={<div>Don't have an account? <Link className='text-muted-foreground' href={ROUTES.register}>Create Account</Link></div>}
     >
       <LoginForm />
     </AuthCard>

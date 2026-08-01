@@ -35,6 +35,20 @@ export async function requireUser() {
 }
 
 /**
+ * Redirect authenticated users away from auth pages
+ * Redirects to dashboard if authenticated
+ */
+export async function redirectIfAuthenticated(): Promise<boolean> {
+  const session = await getServerSession();
+  
+  if (session?.user) {
+    redirect(ROUTES.dashboard);
+  }
+  
+  return true;
+}
+
+/**
  * Check if the current request is authenticated
  */
 export async function isAuthenticated(): Promise<boolean> {
