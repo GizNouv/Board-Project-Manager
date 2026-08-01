@@ -5,7 +5,7 @@ import { verifyPassword } from '@/lib/password';
 import { ROUTES } from './config/routes';
 
 const protectedRoutes = [
-  ROUTES.root,
+  ROUTES.home,
 ];
 
 export const authConfig: NextAuthConfig = {
