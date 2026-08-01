@@ -2,8 +2,14 @@
 
 import { Menu } from 'lucide-react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
-import { UserMenu } from '@/components/auth/UserMenu';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+} from '@/components/ui/breadcrumb';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { UserMenu } from '@/components/layout/UserMenu';
 
 export function AppHeader() {
   return (
@@ -12,12 +18,15 @@ export function AppHeader() {
         <Menu className="h-5 w-5" />
         <span className="sr-only">Toggle sidebar</span>
       </SidebarTrigger>
+      <Breadcrumb className="hidden md:flex">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbPage>Dashboard</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <div className="flex flex-1 items-center justify-end gap-4">
-        {/* Theme toggle placeholder */}
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <span className="sr-only">Toggle theme</span>
-          <span className="text-sm">🌓</span>
-        </Button>
+        <ThemeToggle />
         <UserMenu />
       </div>
     </header>

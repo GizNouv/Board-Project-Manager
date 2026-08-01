@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -16,12 +15,17 @@ import {
   SidebarGroupContent,
 } from '@/components/ui/sidebar';
 import { ROUTES } from '@/config/routes';
+import { navigationConfig } from '@/config/navigation';
+import { Route } from 'next';
 
 export function AppSidebar() {
   const pathname = usePathname();
 
-  const isActive = (path: string) => {
-    return pathname === path || pathname?.startsWith(path + '/');
+  const isActive = (href: string) => {
+    if (href === ROUTES.dashboard) {
+      return pathname === href;
+    }
+    return pathname?.startsWith(href + '/') || pathname === href;
   };
 
   return (
@@ -36,14 +40,16 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive(ROUTES.dashboard)}>
-                  <Link href={ROUTES.dashboard}>
-                    <LayoutDashboard className="h-4 w-4" />
-                    <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {navigationConfig.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton asChild isActive={isActive(item.href)}>
+                    <Link href={item.href as Route}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
