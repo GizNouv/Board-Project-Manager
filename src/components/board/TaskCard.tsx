@@ -1,10 +1,24 @@
-import { BaseTask } from '@/core/domain';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+interface TaskData {
+    id: string;
+    title: string;
+    description: string;
+    estimate: {
+        value: number;
+        unit: string;
+    };
+    priority: {
+        value: string;
+    };
+    type: string;
+    assigneeId: string | null;
+}
+
 interface TaskCardProps {
-    task: BaseTask;
+    task: TaskData;
     className?: string;
 }
 

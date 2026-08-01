@@ -1,12 +1,34 @@
 'use client';
 
-import { Column } from '@/core/domain';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableTask } from './SortableTask';
 
+interface TaskData {
+    id: string;
+    title: string;
+    description: string;
+    estimate: {
+        value: number;
+        unit: string;
+    };
+    priority: {
+        value: string;
+    };
+    type: string;
+    assigneeId: string | null;
+}
+
+interface ColumnData {
+    id: string;
+    title: string;
+    boardId: string;
+    order: number;
+    tasks: TaskData[];
+}
+
 interface ColumnViewProps {
-    column: Column;
+    column: ColumnData;
     className?: string;
 }
 
@@ -33,7 +55,7 @@ export function ColumnView({ column, className }: ColumnViewProps) {
                 ) : (
                     <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
                         {tasks.slice(0, 5).map((task) => (
-                            <SortableTask key={task.id.toString()} task={task} columnId={column.id.toString()} />
+                            <SortableTask key={task.id} task={task} columnId={column.id} />
                         ))}
                     </SortableContext>
                 )}

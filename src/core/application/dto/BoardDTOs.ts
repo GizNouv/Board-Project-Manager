@@ -1,6 +1,3 @@
-/**
- * Data Transfer Objects for Board operations
- */
 export interface CreateBoardDTO {
   title: string;
   ownerId: string;

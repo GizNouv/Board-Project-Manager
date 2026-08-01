@@ -1,4 +1,4 @@
-import { LayoutDashboard } from 'lucide-react';
+import { LayoutDashboard, LayoutGrid } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { ROUTES } from './routes';
 
@@ -10,9 +10,14 @@ export interface NavItem {
 
 export const navigationConfig: NavItem[] = [
   {
-    title: 'Dashboard',
+    title: 'Overview',
     href: ROUTES.dashboard,
     icon: LayoutDashboard,
+  },
+  {
+    title: 'Boards',
+    href: ROUTES.boards,
+    icon: LayoutGrid,
   },
 ];
 

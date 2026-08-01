@@ -2,11 +2,25 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { BaseTask } from '@/core/domain';
 import { TaskCard } from './TaskCard';
 
+interface TaskData {
+    id: string;
+    title: string;
+    description: string;
+    estimate: {
+        value: number;
+        unit: string;
+    };
+    priority: {
+        value: string;
+    };
+    type: string;
+    assigneeId: string | null;
+}
+
 interface SortableTaskProps {
-    task: BaseTask;
+    task: TaskData;
     columnId: string;
 }
 

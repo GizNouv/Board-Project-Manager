@@ -25,6 +25,9 @@ export function AppSidebar() {
     if (href === ROUTES.dashboard) {
       return pathname === href;
     }
+    if (href === ROUTES.boards) {
+      return pathname === href || pathname?.startsWith('/boards/');
+    }
     return pathname?.startsWith(href + '/') || pathname === href;
   };
 

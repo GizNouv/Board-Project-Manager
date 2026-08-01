@@ -18,15 +18,26 @@ export class BoardApplicationService {
   constructor(
     private readonly boardRepository: IBoardRepository,
     private readonly columnRepository: IColumnRepository
-  ) {}
+  ) { }
 
   async createBoard(dto: CreateBoardDTO): Promise<Result<Board>> {
+    // Validate input
+    if (!dto.title || dto.title.trim().length === 0) {
+      return ResultFactory.failure(new ValidationException('Board title is required'));
+    }
+
+    if (dto.title.length > 100) {
+      return ResultFactory.failure(new ValidationException('Board title must not exceed 100 characters'));
+    }
+
+    // Create board entity
     const board = new Board(
       new BoardId(crypto.randomUUID()),
       dto.title,
       new UserId(dto.ownerId)
     );
 
+    // Save to repository
     return await this.boardRepository.save(board);
   }
 
@@ -42,10 +53,6 @@ export class BoardApplicationService {
     return await this.boardRepository.findByUserId(new UserId(userId));
   }
 
-  async getAllBoards(): Promise<Result<Board[]>> {
-    return await this.boardRepository.findAll();
-  }
-
   async getFirstBoardByUser(userId: string): Promise<Result<Board>> {
     const boardsResult = await this.boardRepository.findByUserId(new UserId(userId));
     if (boardsResult.isFailure()) {
@@ -57,8 +64,11 @@ export class BoardApplicationService {
       return ResultFactory.failure(new EntityNotFoundException('Board', userId));
     }
 
-    // Get the first board with its columns and tasks
     return await this.boardRepository.findBoardWithColumns(boards[0].id);
+  }
+
+  async getAllBoards(): Promise<Result<Board[]>> {
+    return await this.boardRepository.findAll();
   }
 
   async updateBoard(id: string, dto: UpdateBoardDTO): Promise<Result<Board>> {

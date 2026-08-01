@@ -16,17 +16,45 @@ import {
   SortableContext,
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Board, Column } from '@/core/domain';
 import { SortableColumn } from './SortableColumn';
+import { Column } from '@/core/domain';
+
+// Plain object representation of Column for client-side use
+interface ColumnData {
+  id: string;
+  title: string;
+  boardId: string;
+  order: number;
+  tasks: TaskData[];
+}
+
+interface TaskData {
+  id: string;
+  title: string;
+  description: string;
+  estimate: {
+    value: number;
+    unit: string;
+  };
+  priority: {
+    value: string;
+  };
+  type: string;
+  assigneeId: string | null;
+}
 
 interface BoardViewProps {
-  board: Board;
+  board: {
+    id: string;
+    title: string;
+    columns: ColumnData[];
+  };
   className?: string;
 }
 
 export function BoardView({ board: initialBoard, className }: BoardViewProps) {
   // Local state initialized from server props
-  const [columns, setColumns] = useState<Column[]>(initialBoard.columns);
+  const [columns, setColumns] = useState<ColumnData[]>(initialBoard.columns);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -72,8 +100,8 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
     if (!activeTaskId || !overTaskId) return;
 
     // Find source and destination columns
-    const sourceColumnIndex = columns.findIndex(col => col.id.toString() === activeColumnId);
-    const destColumnIndex = columns.findIndex(col => col.id.toString() === overColumnId);
+    const sourceColumnIndex = columns.findIndex(col => col.id === activeColumnId);
+    const destColumnIndex = columns.findIndex(col => col.id === overColumnId);
 
     if (sourceColumnIndex === -1 || destColumnIndex === -1) return;
 
@@ -82,30 +110,24 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
 
     // Find task indices
     const sourceTasks = [...sourceColumn.tasks];
-    const sourceTaskIndex = sourceTasks.findIndex(task => task.id.toString() === activeTaskId);
+    const sourceTaskIndex = sourceTasks.findIndex(task => task.id === activeTaskId);
 
     if (sourceTaskIndex === -1) return;
 
     // If moving within same column
     if (activeColumnId === overColumnId) {
       const destTasks = [...sourceColumn.tasks];
-      const destTaskIndex = destTasks.findIndex(task => task.id.toString() === overTaskId);
+      const destTaskIndex = destTasks.findIndex(task => task.id === overTaskId);
 
       if (destTaskIndex !== -1 && sourceTaskIndex !== destTaskIndex) {
         const [movedTask] = destTasks.splice(sourceTaskIndex, 1);
         destTasks.splice(destTaskIndex, 0, movedTask);
 
-        const updatedColumn = new Column(
-          sourceColumn.id,
-          sourceColumn.title,
-          sourceColumn.boardId,
-          sourceColumn.order
-        );
-        // Re-add tasks (simplified - in real implementation we'd need proper task addition)
-        destTasks.forEach(task => updatedColumn.addTask(task));
-
         const newColumns = [...columns];
-        newColumns[sourceColumnIndex] = updatedColumn;
+        newColumns[sourceColumnIndex] = {
+          ...sourceColumn,
+          tasks: destTasks,
+        };
         setColumns(newColumns);
       }
       return;
@@ -116,7 +138,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
 
     // Find destination position
     const destTasks = [...destColumn.tasks];
-    const destTaskIndex = destTasks.findIndex(task => task.id.toString() === overTaskId);
+    const destTaskIndex = destTasks.findIndex(task => task.id === overTaskId);
 
     if (destTaskIndex !== -1) {
       destTasks.splice(destTaskIndex, 0, movedTask);
@@ -124,27 +146,15 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
       destTasks.push(movedTask);
     }
 
-    // Update source column
-    const updatedSourceColumn = new Column(
-      sourceColumn.id,
-      sourceColumn.title,
-      sourceColumn.boardId,
-      sourceColumn.order
-    );
-    sourceTasks.forEach(task => updatedSourceColumn.addTask(task));
-
-    // Update destination column
-    const updatedDestColumn = new Column(
-      destColumn.id,
-      destColumn.title,
-      destColumn.boardId,
-      destColumn.order
-    );
-    destTasks.forEach(task => updatedDestColumn.addTask(task));
-
     const newColumns = [...columns];
-    newColumns[sourceColumnIndex] = updatedSourceColumn;
-    newColumns[destColumnIndex] = updatedDestColumn;
+    newColumns[sourceColumnIndex] = {
+      ...sourceColumn,
+      tasks: sourceTasks,
+    };
+    newColumns[destColumnIndex] = {
+      ...destColumn,
+      tasks: destTasks,
+    };
     setColumns(newColumns);
   };
 
@@ -162,7 +172,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
         <div className={className}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {columns.map((column) => (
-              <SortableColumn key={column.id.toString()} column={column} />
+              <SortableColumn key={column.id} column={column} />
             ))}
           </div>
         </div>
