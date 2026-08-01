@@ -46,6 +46,21 @@ export class BoardApplicationService {
     return await this.boardRepository.findAll();
   }
 
+  async getFirstBoardByUser(userId: string): Promise<Result<Board>> {
+    const boardsResult = await this.boardRepository.findByUserId(new UserId(userId));
+    if (boardsResult.isFailure()) {
+      return ResultFactory.failure(boardsResult.error);
+    }
+
+    const boards = boardsResult.value;
+    if (boards.length === 0) {
+      return ResultFactory.failure(new EntityNotFoundException('Board', userId));
+    }
+
+    // Get the first board with its columns and tasks
+    return await this.boardRepository.findBoardWithColumns(boards[0].id);
+  }
+
   async updateBoard(id: string, dto: UpdateBoardDTO): Promise<Result<Board>> {
     const boardResult = await this.boardRepository.findById(new BoardId(id));
     if (boardResult.isFailure()) {
