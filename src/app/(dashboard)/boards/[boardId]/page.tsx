@@ -51,12 +51,12 @@ export default async function BoardPage({ params }: BoardPageProps) {
 
     return (
         <div className="space-y-6">
-            <BoardHeader title={boardDTO.title} />
+            <BoardHeader title={boardDTO.title} boardId={boardId} />
 
             {hasColumns ? (
                 <ColumnList columns={columnDTOs} className="w-full" />
             ) : (
-                <EmptyColumnState />
+                <EmptyColumnState boardId={boardId} />
             )}
         </div>
     );
