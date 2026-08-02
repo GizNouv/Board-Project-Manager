@@ -11,22 +11,37 @@ import {
   DomainException
 } from '../../domain';
 import { BoardMapper } from '../mappers/BoardMapper';
+import { ColumnMapper } from '../mappers/ColumnMapper';
 import { PrismaErrorMapper } from '../errors/PrismaErrorMapper';
 
 export class PrismaBoardRepository implements IBoardRepository {
   private boardMapper = new BoardMapper();
+  private columnMapper = new ColumnMapper();
 
   async findById(id: BoardId): Promise<Result<Board>> {
     try {
       const board = await prisma.board.findUnique({
-        where: { id: id.toString() }
+        where: { id: id.toString() },
+        include: {
+          columns: {
+            orderBy: { order: 'asc' },
+            include: {
+              tasks: {
+                include: {
+                  assignee: true
+                },
+                orderBy: { createdAt: 'asc' }
+              }
+            }
+          }
+        }
       });
 
       if (!board) {
         return ResultFactory.failure(new EntityNotFoundException('Board', id.toString()));
       }
 
-      return ResultFactory.success(this.boardMapper.toDomain(board));
+      return ResultFactory.success(this.boardMapper.toDomainWithColumns(board));
     } catch (error) {
       throw PrismaErrorMapper.map(error);
     }
@@ -36,10 +51,23 @@ export class PrismaBoardRepository implements IBoardRepository {
     try {
       const boards = await prisma.board.findMany({
         where: { ownerId: userId.toString() },
+        include: {
+          columns: {
+            orderBy: { order: 'asc' },
+            include: {
+              tasks: {
+                include: {
+                  assignee: true
+                },
+                orderBy: { createdAt: 'asc' }
+              }
+            }
+          }
+        },
         orderBy: { createdAt: 'desc' }
       });
 
-      return ResultFactory.success(boards.map(board => this.boardMapper.toDomain(board)));
+      return ResultFactory.success(boards.map(board => this.boardMapper.toDomainWithColumns(board)));
     } catch (error) {
       throw PrismaErrorMapper.map(error);
     }
@@ -48,10 +76,23 @@ export class PrismaBoardRepository implements IBoardRepository {
   async findAll(): Promise<Result<Board[]>> {
     try {
       const boards = await prisma.board.findMany({
+        include: {
+          columns: {
+            orderBy: { order: 'asc' },
+            include: {
+              tasks: {
+                include: {
+                  assignee: true
+                },
+                orderBy: { createdAt: 'asc' }
+              }
+            }
+          }
+        },
         orderBy: { createdAt: 'desc' }
       });
 
-      return ResultFactory.success(boards.map(board => this.boardMapper.toDomain(board)));
+      return ResultFactory.success(boards.map(board => this.boardMapper.toDomainWithColumns(board)));
     } catch (error) {
       throw PrismaErrorMapper.map(error);
     }
@@ -139,32 +180,51 @@ export class PrismaBoardRepository implements IBoardRepository {
   async saveBoardWithColumns(board: Board): Promise<Result<Board>> {
     try {
       await prisma.$transaction(async (tx) => {
+        // Save board
         const boardData = this.boardMapper.toPersistence(board);
         await tx.board.upsert({
           where: { id: board.id.toString() },
           update: boardData,
-          create: boardData
+          create: boardData,
         });
 
-        for (const column of board.columns) {
-          const columnData = {
-            id: column.id.toString(),
-            title: column.title,
-            boardId: board.id.toString(),
-            order: column.order,
-            createdAt: column.createdAt,
-            updatedAt: column.updatedAt
-          };
+        // Get existing columns for this board
+        const existingColumns = await tx.column.findMany({
+          where: { boardId: board.id.toString() },
+        });
 
-          await tx.column.upsert({
-            where: { id: column.id.toString() },
-            update: columnData,
-            create: columnData
-          });
+        const existingColumnIds = new Set(existingColumns.map((c) => c.id));
+        const boardColumns = board.columns;
 
+        // Delete columns that are no longer in the board
+        const columnsToDelete = existingColumns.filter(
+          (c) => !boardColumns.some((bc) => bc.id.toString() === c.id)
+        );
+        for (const col of columnsToDelete) {
+          await tx.column.delete({ where: { id: col.id } });
+        }
+
+        // Create or update columns
+        for (const column of boardColumns) {
+          const columnData = this.columnMapper.toPersistence(column);
+
+          if (existingColumnIds.has(column.id.toString())) {
+            // Update existing column
+            await tx.column.update({
+              where: { id: column.id.toString() },
+              data: columnData,
+            });
+          } else {
+            // Create new column
+            await tx.column.create({
+              data: columnData,
+            });
+          }
+
+          // Save tasks for this column
           for (const task of column.tasks) {
             const { BugTask, FeatureTask } = await import('../../domain');
-            
+
             const taskData = {
               id: task.id.toString(),
               title: task.title,
@@ -178,13 +238,13 @@ export class PrismaBoardRepository implements IBoardRepository {
               severity: task instanceof BugTask ? (task as any).severity : null,
               complexity: task instanceof FeatureTask ? (task as any).complexity : null,
               createdAt: task.createdAt,
-              updatedAt: task.updatedAt
+              updatedAt: task.updatedAt,
             };
 
             await tx.task.upsert({
               where: { id: task.id.toString() },
               update: taskData,
-              create: taskData
+              create: taskData,
             });
           }
         }

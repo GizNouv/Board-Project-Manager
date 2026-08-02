@@ -18,7 +18,7 @@ export class BoardApplicationService {
   constructor(
     private readonly boardRepository: IBoardRepository,
     private readonly columnRepository: IColumnRepository
-  ) {}
+  ) { }
 
   async createBoard(dto: CreateBoardDTO): Promise<Result<Board>> {
     if (!dto.title || dto.title.trim().length === 0) {
@@ -93,22 +93,29 @@ export class BoardApplicationService {
       return ResultFactory.failure(boardResult.error);
     }
 
+    const board = boardResult.value;
+
+    // Calculate the next order value based on existing columns
+    const existingColumns = board.columns;
+    const nextOrder = existingColumns.length > 0
+      ? Math.max(...existingColumns.map(col => col.order)) + 1
+      : 0;
+
     const column = new Column(
       new ColumnId(crypto.randomUUID()),
       dto.title,
       dto.boardId,
-      dto.order || 0
+      nextOrder
     );
 
-    const board = boardResult.value;
     board.addColumn(column);
 
-    const updateResult = await this.boardRepository.update(board);
-    if (updateResult.isFailure()) {
-      return ResultFactory.failure(updateResult.error);
+    const result = await this.boardRepository.saveBoardWithColumns(board);
+    if (result.isFailure()) {
+      return ResultFactory.failure(result.error);
     }
 
-    return await this.columnRepository.save(column);
+    return ResultFactory.success(column);
   }
 
   async getColumn(id: string): Promise<Result<Column>> {
