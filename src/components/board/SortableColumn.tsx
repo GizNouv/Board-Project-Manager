@@ -3,29 +3,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ColumnView } from './ColumnView';
-
-interface ColumnData {
-  id: string;
-  title: string;
-  boardId: string;
-  order: number;
-  tasks: TaskData[];
-}
-
-interface TaskData {
-  id: string;
-  title: string;
-  description: string;
-  estimate: {
-    value: number;
-    unit: string;
-  };
-  priority: {
-    value: string;
-  };
-  type: string;
-  assigneeId: string | null;
-}
+import { ColumnData } from '@/types/kanban';
 
 interface SortableColumnProps {
   column: ColumnData;
@@ -39,12 +17,18 @@ export function SortableColumn({ column }: SortableColumnProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: `column-${column.id}` });
+  } = useSortable({
+    id: `column-${column.id}`,
+    data: {
+      type: 'column',
+      columnId: column.id,
+    },
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.4 : 1,
   };
 
   return (

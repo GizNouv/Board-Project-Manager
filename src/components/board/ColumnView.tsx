@@ -1,34 +1,14 @@
 'use client';
 
+import { useDroppable } from '@dnd-kit/core';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableTask } from './SortableTask';
 import { CreateTaskDialog } from '@/components/task/CreateTaskDialog';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-
-interface TaskData {
-    id: string;
-    title: string;
-    description: string;
-    estimate: {
-        value: number;
-        unit: string;
-    };
-    priority: {
-        value: string;
-    };
-    type: string;
-    assigneeId: string | null;
-}
-
-interface ColumnData {
-    id: string;
-    title: string;
-    boardId: string;
-    order: number;
-    tasks: TaskData[];
-}
+import { ColumnData } from '@/types/kanban';
+import { useEffect } from 'react';
 
 interface ColumnViewProps {
     column: ColumnData;
@@ -39,11 +19,40 @@ export function ColumnView({ column, className }: ColumnViewProps) {
     const tasks = column.tasks;
     const taskCount = tasks.length;
 
+    // Log when column renders and its tasks
+    useEffect(() => {
+        console.log(`📋 ColumnView render: ${column.id} - ${column.title}`);
+        console.log(`   tasks:`, tasks.map(t => ({ id: t.id, title: t.title })));
+    }, [column.id, column.title, tasks]);
+
+    // Check for duplicate task IDs
+    useEffect(() => {
+        const taskIds = tasks.map(t => t.id);
+        const uniqueIds = new Set(taskIds);
+        if (taskIds.length !== uniqueIds.size) {
+            console.warn(`⚠️ DUPLICATE TASK IDs FOUND in column: ${column.id} - ${column.title}`);
+            console.warn('Task IDs:', taskIds);
+        }
+    }, [tasks, column.id]);
+
     // Prepare task IDs for sortable context
     const taskIds = tasks.map(task => `${column.id}-task-${task.id}`);
+    console.log(`🔄 ColumnView taskIds for ${column.id}:`, taskIds);
+
+    // Set up droppable for the column
+    const { setNodeRef: setDroppableRef, isOver } = useDroppable({
+        id: column.id,
+        data: {
+            type: 'column',
+            columnId: column.id,
+        },
+    });
 
     return (
-        <Card className={className}>
+        <Card
+            ref={setDroppableRef}
+            className={`${className} ${isOver ? 'ring-2 ring-primary ring-opacity-50' : ''}`}
+        >
             <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-medium">
