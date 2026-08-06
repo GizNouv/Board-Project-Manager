@@ -4,6 +4,7 @@ import {
   Board,
   BoardId,
   UserId,
+  ColumnId,
   Result,
   ResultFactory,
   EntityNotFoundException,
@@ -42,6 +43,23 @@ export class PrismaBoardRepository implements IBoardRepository {
       }
 
       return ResultFactory.success(this.boardMapper.toDomainWithColumns(board));
+    } catch (error) {
+      throw PrismaErrorMapper.map(error);
+    }
+  }
+
+  async findBoardByColumnId(columnId: ColumnId): Promise<Result<Board>> {
+    try {
+      const column = await prisma.column.findUnique({
+        where: { id: columnId.toString() },
+        select: { boardId: true }
+      });
+
+      if (!column) {
+        return ResultFactory.failure(new EntityNotFoundException('Column', columnId.toString()));
+      }
+
+      return this.findBoardWithColumns(new BoardId(column.boardId));
     } catch (error) {
       throw PrismaErrorMapper.map(error);
     }
@@ -180,7 +198,6 @@ export class PrismaBoardRepository implements IBoardRepository {
   async saveBoardWithColumns(board: Board): Promise<Result<Board>> {
     try {
       await prisma.$transaction(async (tx) => {
-        // Save board
         const boardData = this.boardMapper.toPersistence(board);
         await tx.board.upsert({
           where: { id: board.id.toString() },
@@ -188,7 +205,6 @@ export class PrismaBoardRepository implements IBoardRepository {
           create: boardData,
         });
 
-        // Get existing columns for this board
         const existingColumns = await tx.column.findMany({
           where: { boardId: board.id.toString() },
         });
@@ -196,7 +212,6 @@ export class PrismaBoardRepository implements IBoardRepository {
         const existingColumnIds = new Set(existingColumns.map((c) => c.id));
         const boardColumns = board.columns;
 
-        // Delete columns that are no longer in the board
         const columnsToDelete = existingColumns.filter(
           (c) => !boardColumns.some((bc) => bc.id.toString() === c.id)
         );
@@ -204,24 +219,20 @@ export class PrismaBoardRepository implements IBoardRepository {
           await tx.column.delete({ where: { id: col.id } });
         }
 
-        // Create or update columns
         for (const column of boardColumns) {
           const columnData = this.columnMapper.toPersistence(column);
 
           if (existingColumnIds.has(column.id.toString())) {
-            // Update existing column
             await tx.column.update({
               where: { id: column.id.toString() },
               data: columnData,
             });
           } else {
-            // Create new column
             await tx.column.create({
               data: columnData,
             });
           }
 
-          // Save tasks for this column
           for (const task of column.tasks) {
             const { BugTask, FeatureTask } = await import('../../domain');
 

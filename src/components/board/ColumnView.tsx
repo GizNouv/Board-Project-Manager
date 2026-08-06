@@ -3,6 +3,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableTask } from './SortableTask';
+import { CreateTaskDialog } from '@/components/task/CreateTaskDialog';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 
 interface TaskData {
     id: string;
@@ -42,27 +45,51 @@ export function ColumnView({ column, className }: ColumnViewProps) {
     return (
         <Card className={className}>
             <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">
-                    {column.title}
-                </CardTitle>
-                <CardDescription>
-                    {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-medium">
+                        {column.title}
+                    </CardTitle>
+                    <CardDescription>
+                        {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
+                    </CardDescription>
+                </div>
             </CardHeader>
             <CardContent className="space-y-2">
                 {taskCount === 0 ? (
-                    <p className="text-sm text-muted-foreground">No tasks yet</p>
+                    <div className="flex flex-col items-center justify-center py-4 text-center">
+                        <p className="text-sm text-muted-foreground">No tasks yet</p>
+                        <CreateTaskDialog
+                            columnId={column.id}
+                            trigger={
+                                <Button variant="ghost" size="sm" className="mt-2 text-muted-foreground">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Add Task
+                                </Button>
+                            }
+                        />
+                    </div>
                 ) : (
-                    <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-                        {tasks.slice(0, 5).map((task) => (
-                            <SortableTask key={task.id} task={task} columnId={column.id} />
-                        ))}
-                    </SortableContext>
-                )}
-                {taskCount > 5 && (
-                    <p className="text-xs text-muted-foreground text-center">
-                        +{taskCount - 5} more tasks
-                    </p>
+                    <>
+                        <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+                            {tasks.slice(0, 5).map((task) => (
+                                <SortableTask key={task.id} task={task} columnId={column.id} />
+                            ))}
+                        </SortableContext>
+                        <CreateTaskDialog
+                            columnId={column.id}
+                            trigger={
+                                <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Add Task
+                                </Button>
+                            }
+                        />
+                        {taskCount > 5 && (
+                            <p className="text-xs text-muted-foreground text-center">
+                                +{taskCount - 5} more tasks
+                            </p>
+                        )}
+                    </>
                 )}
             </CardContent>
         </Card>

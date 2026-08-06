@@ -56,21 +56,27 @@ export class EpicTask extends BaseTask {
   }
 
   public updateProgress(completed: number = 0): void {
-    // In real scenario, would calculate based on sub-task completion
     this._progress = Math.min(100, Math.max(0, completed));
   }
 
   public override calculateStoryPoints(): number {
-    // Epics: points based on sub-task count and overall estimate
     const basePoints = this.estimate.toHours() / 6;
     const subTaskBonus = this._subTasks.length * 2;
     return Math.round(basePoints + subTaskBonus);
   }
 
+  private normalizeColumnTitle(title: string): string {
+    return title
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '')
+      .replace(/-/g, '');
+  }
+
   public override canMoveTo(columnTitle: string): boolean {
-    // Epics have limited movement - they stay in backlog or planning
-    const lowerTitle = columnTitle.toLowerCase();
-    return ['backlog', 'planning', 'in progress', 'completed'].includes(lowerTitle);
+    const normalized = this.normalizeColumnTitle(columnTitle);
+    const validColumns = ['backlog', 'planning', 'inprogress', 'completed'];
+    return validColumns.includes(normalized);
   }
 
   public override badgeColor(): string {
