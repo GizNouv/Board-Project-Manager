@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   DndContext,
-  closestCenter,
+  rectIntersection,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -135,43 +135,144 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
 
     // Handle column reordering
     if (activeId.startsWith('column-')) {
-      console.log('  📊 COLUMN REORDER');
+      console.log('📊 COLUMN REORDER');
+
+      const activeColId = activeId.replace('column-', '');
+      console.log('  activeColId:', activeColId);
+
+      let overColId: string | null = null;
+      let isColumnDrop = false;
+
+      // Check if dropping on a prefixed column ID
       if (overId.startsWith('column-')) {
-        const oldIndex = columns.findIndex(col => `column-${col.id}` === activeId);
-        const newIndex = columns.findIndex(col => `column-${col.id}` === overId);
+        overColId = overId.replace('column-', '');
+        isColumnDrop = true;
+        console.log('  Dropping on COLUMN (prefixed):', overColId);
+      }
+      // Check if dropping on a raw column ID
+      else if (overId !== 'columns-container') {
+        const columnExists = columns.some(col => col.id === overId);
+        if (columnExists) {
+          overColId = overId;
+          isColumnDrop = true;
+          console.log('  Dropping on COLUMN (raw):', overColId);
+        } else {
+          console.log('  ❌ overId is not a column:', overId);
+        }
+      }
+
+      if (isColumnDrop && overColId) {
+        const oldIndex = columns.findIndex(col => col.id === activeColId);
+        const newIndex = columns.findIndex(col => col.id === overColId);
+
         console.log('  oldIndex:', oldIndex);
         console.log('  newIndex:', newIndex);
+        console.log('  columns.length:', columns.length);
+        console.log('  columns order:', columns.map(c => c.id));
 
-        if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-          console.log('  ✅ Moving column from', oldIndex, 'to', newIndex);
-          const newColumns = arrayMove(columns, oldIndex, newIndex);
-          console.log('  newColumns after move:', newColumns.map(c => c.id));
+        const overElement = document.querySelector(`[data-column-id="${overColId}"]`);
+        let insertIndex = newIndex;
+
+        if (overElement) {
+          const rect = overElement.getBoundingClientRect();
+          let mouseX = rect.left + rect.width / 2;
+          if ((event as any).activatorEvent) {
+            mouseX = (event as any).activatorEvent.clientX;
+          }
+          const isLeftHalf = mouseX < rect.left + rect.width / 2;
+
+          console.log('  Mouse X:', mouseX);
+          console.log('  Rect left:', rect.left);
+          console.log('  Rect right:', rect.right);
+          console.log('  isLeftHalf:', isLeftHalf);
+
+          if (oldIndex < newIndex) {
+            // Moving right
+            if (isLeftHalf) {
+              insertIndex = newIndex - 1;
+              console.log('  Moving right, left half -> insertIndex:', insertIndex);
+            } else {
+              insertIndex = newIndex;
+              console.log('  Moving right, right half -> insertIndex:', insertIndex);
+            }
+          } else if (oldIndex > newIndex) {
+            // Moving left
+            if (isLeftHalf) {
+              insertIndex = newIndex;
+              console.log('  Moving left, left half -> insertIndex:', insertIndex);
+            } else {
+              insertIndex = newIndex + 1;
+              console.log('  Moving left, right half -> insertIndex:', insertIndex);
+            }
+          } else {
+            insertIndex = newIndex;
+          }
+
+          // Ensure insertIndex is within bounds
+          insertIndex = Math.max(0, Math.min(columns.length - 1, insertIndex));
+          console.log('  Final insertIndex:', insertIndex);
+        } else {
+          console.log('  ❌ No element found for overColId:', overColId);
+        }
+
+        // If insertIndex equals oldIndex, adjust it by 1 in the direction of movement
+        if (insertIndex === oldIndex) {
+          console.log('  🔧 insertIndex equals oldIndex, adjusting...');
+          if (oldIndex < newIndex) {
+            // Moving right, but no position change - move one step right
+            insertIndex = Math.min(columns.length - 1, oldIndex + 1);
+            console.log('  Adjusting right -> insertIndex:', insertIndex);
+          } else if (oldIndex > newIndex) {
+            // Moving left, but no position change - move one step left
+            insertIndex = Math.max(0, oldIndex - 1);
+            console.log('  Adjusting left -> insertIndex:', insertIndex);
+          }
+        }
+
+        if (oldIndex !== insertIndex) {
+          console.log('  ✅ Moving column from', oldIndex, 'to', insertIndex);
+          const newColumns = arrayMove(columns, oldIndex, insertIndex);
+          console.log('  newColumns order after move:', newColumns.map(c => c.id));
           updateCounterRef.current += 1;
           console.log('  🔄 State update #', updateCounterRef.current);
           setColumns(newColumns);
+        } else {
+          console.log('  ⏭️ No position change needed');
         }
+
         setActiveColumn(null);
         setActiveTask(null);
         return;
       }
 
-      // Dropping column at the end of the container
+      // Check if dropping on container
       if (overId === 'columns-container') {
-        const oldIndex = columns.findIndex(col => `column-${col.id}` === activeId);
-        console.log('  Moving column to end, oldIndex:', oldIndex);
-        if (oldIndex !== -1) {
+        console.log('  Dropping on CONTAINER (end of list)');
+        const oldIndex = columns.findIndex(col => col.id === activeColId);
+        console.log('  oldIndex:', oldIndex);
+
+        if (oldIndex !== -1 && oldIndex !== columns.length - 1) {
+          console.log('  ✅ Moving column to end');
           const newColumns = [...columns];
           const [movedColumn] = newColumns.splice(oldIndex, 1);
           newColumns.push(movedColumn);
-          console.log('  newColumns after move:', newColumns.map(c => c.id));
+          console.log('  newColumns order after move:', newColumns.map(c => c.id));
           updateCounterRef.current += 1;
           console.log('  🔄 State update #', updateCounterRef.current);
           setColumns(newColumns);
+        } else {
+          console.log('  ⏭️ Column already at end or not found');
         }
+
         setActiveColumn(null);
         setActiveTask(null);
         return;
       }
+
+      console.log('  ⚠️ Unhandled overId:', overId);
+      setActiveColumn(null);
+      setActiveTask(null);
+      return;
     }
 
     // Handle task dragging
@@ -181,7 +282,6 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
       console.log('  activeColumnId:', activeColumnId);
       console.log('  activeTaskId:', activeTaskId);
 
-      // Find source column
       const sourceColumnIndex = columns.findIndex(col => col.id === activeColumnId);
       console.log('  sourceColumnIndex:', sourceColumnIndex);
       if (sourceColumnIndex === -1) {
@@ -193,7 +293,6 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
       const sourceColumn = columns[sourceColumnIndex];
       console.log('  sourceColumn:', sourceColumn.id, sourceColumn.title);
 
-      // Find task in source column
       const sourceTaskIndex = sourceColumn.tasks.findIndex(t => t.id === activeTaskId);
       console.log('  sourceTaskIndex:', sourceTaskIndex);
       if (sourceTaskIndex === -1) {
@@ -203,13 +302,11 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
         return;
       }
 
-      // Check if dropping on a task
       if (overId.includes('-task-')) {
         const [destColumnId, destTaskId] = overId.split('-task-');
         console.log('  destColumnId:', destColumnId);
         console.log('  destTaskId:', destTaskId);
 
-        // Same column reorder
         if (activeColumnId === destColumnId) {
           console.log('  🔄 SAME COLUMN REORDER');
           const destTaskIndex = sourceColumn.tasks.findIndex(t => t.id === destTaskId);
@@ -222,7 +319,6 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
             return;
           }
 
-          // Check if moving to the same position
           if (sourceTaskIndex === destTaskIndex) {
             console.log('  ⏭️ Same position, skipping');
             setActiveColumn(null);
@@ -249,7 +345,6 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
           return;
         }
 
-        // Cross-column move
         console.log('  🔄 CROSS COLUMN MOVE');
         const destColumnIndex = columns.findIndex(col => col.id === destColumnId);
         console.log('  destColumnIndex:', destColumnIndex);
@@ -287,7 +382,6 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
         return;
       }
 
-      // Dropping on a column (not a task)
       if (!overId.includes('-task-') && overId !== 'columns-container') {
         console.log('  📥 DROPPING ON COLUMN (not task)');
         const destColumnId = overId;
@@ -300,7 +394,6 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
           return;
         }
 
-        // FIX: If dropping on the same column (empty space), skip to prevent duplication
         if (destColumnIndex === sourceColumnIndex) {
           console.log('  ⏭️ Dropping on same column (empty space), skipping');
           setActiveColumn(null);
@@ -331,7 +424,6 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
         return;
       }
 
-      // Dropping task into the container (at the end of the last column)
       if (overId === 'columns-container') {
         console.log('  📥 DROPPING INTO CONTAINER');
         const lastColumnIndex = columns.length - 1;
@@ -362,7 +454,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={rectIntersection}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >

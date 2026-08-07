@@ -4,6 +4,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ColumnView } from './ColumnView';
 import { ColumnData } from '@/types/kanban';
+import { GripVertical } from 'lucide-react';
+import { useEffect } from 'react';
 
 interface SortableColumnProps {
   column: ColumnData;
@@ -31,15 +33,59 @@ export function SortableColumn({ column }: SortableColumnProps) {
     opacity: isDragging ? 0.4 : 1,
   };
 
+  // Log when SortableColumn renders with drag state
+  useEffect(() => {
+    console.log(`📋 SortableColumn ${column.id} (${column.title}) rendered, isDragging:`, isDragging);
+  }, [isDragging, column.id, column.title]);
+
+  // Handle keyboard events to prevent Space from triggering drag on form elements
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+
+    // Check if the target or its parent is a form element
+    const isFormElement =
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.tagName === 'SELECT' ||
+      target.tagName === 'BUTTON' ||
+      target.closest('input') !== null ||
+      target.closest('textarea') !== null ||
+      target.closest('select') !== null ||
+      target.closest('button') !== null ||
+      target.closest('[role="dialog"]') !== null ||
+      target.closest('[contenteditable="true"]') !== null;
+
+    // If it's a form element, stop the event from reaching dnd-kit
+    if (isFormElement) {
+      event.stopPropagation();
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      className="h-full"
+      className="h-full cursor-grab active:cursor-grabbing relative"
+      data-column-id={column.id}
+      onKeyDown={handleKeyDown}
     >
-      <ColumnView column={column} />
+      {/* Drop indicator - left side */}
+      {isDragging && (
+        <div className="absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full shadow-lg z-10" />
+      )}
+
+      <div className="relative">
+        {/* Drag Handle for visual indication */}
+        <div
+          className="absolute -left-2 top-1/2 -translate-y-1/2 rounded p-1 hover:bg-accent opacity-50 hover:opacity-100"
+          aria-label="Drag column"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <ColumnView column={column} />
+      </div>
     </div>
   );
 }
