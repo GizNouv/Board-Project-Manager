@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { ColumnView } from './ColumnView';
 import { ColumnData } from '@/types/kanban';
 import { GripVertical } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface SortableColumnProps {
   column: ColumnData;
@@ -19,6 +19,8 @@ export function SortableColumn({ column }: SortableColumnProps) {
     transform,
     transition,
     isDragging,
+    over,
+    active,
   } = useSortable({
     id: `column-${column.id}`,
     data: {
@@ -26,6 +28,8 @@ export function SortableColumn({ column }: SortableColumnProps) {
       columnId: column.id,
     },
   });
+
+  const [dropPosition, setDropPosition] = useState<'left' | 'right' | null>(null);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -42,7 +46,6 @@ export function SortableColumn({ column }: SortableColumnProps) {
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
 
-    // Check if the target or its parent is a form element
     const isFormElement =
       target.tagName === 'INPUT' ||
       target.tagName === 'TEXTAREA' ||
@@ -55,11 +58,54 @@ export function SortableColumn({ column }: SortableColumnProps) {
       target.closest('[role="dialog"]') !== null ||
       target.closest('[contenteditable="true"]') !== null;
 
-    // If it's a form element, stop the event from reaching dnd-kit
     if (isFormElement) {
       event.stopPropagation();
     }
   };
+
+  // Determine if this column is being hovered over during a drag (drop target)
+  const isDropTarget = over?.id === `column-${column.id}` && !isDragging && active?.id !== `column-${column.id}`;
+
+  // Update drop position when hovering over the column
+  useEffect(() => {
+    if (isDropTarget && over) {
+      const element = document.querySelector(`[data-column-id="${column.id}"]`);
+      if (element) {
+        const rect = element.getBoundingClientRect();
+        // Try to get mouse position from the over event
+        let mouseX = rect.left + rect.width / 2;
+        if ((over as any).rect?.left !== undefined) {
+          mouseX = (over as any).rect.left;
+        }
+        const isLeftHalf = mouseX < rect.left + rect.width / 2;
+        setDropPosition(isLeftHalf ? 'left' : 'right');
+      }
+    } else {
+      setDropPosition(null);
+    }
+  }, [isDropTarget, over, column.id]);
+
+  // Real-time mouse tracking for drop position
+  useEffect(() => {
+    if (!isDropTarget) {
+      setDropPosition(null);
+      return;
+    }
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const element = document.querySelector(`[data-column-id="${column.id}"]`);
+      if (element) {
+        const rect = element.getBoundingClientRect();
+        const isLeftHalf = e.clientX < rect.left + rect.width / 2;
+        setDropPosition(isLeftHalf ? 'left' : 'right');
+      }
+    };
+
+    document.addEventListener('pointermove', handlePointerMove);
+    return () => {
+      document.removeEventListener('pointermove', handlePointerMove);
+    };
+  }, [isDropTarget, column.id]);
 
   return (
     <div
@@ -71,9 +117,14 @@ export function SortableColumn({ column }: SortableColumnProps) {
       data-column-id={column.id}
       onKeyDown={handleKeyDown}
     >
-      {/* Drop indicator - left side */}
-      {isDragging && (
-        <div className="absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full shadow-lg z-10" />
+      {/* Drop indicator - LEFT side (column will be inserted BEFORE this one) */}
+      {isDropTarget && dropPosition === 'left' && (
+        <div className="absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full shadow-lg z-20" />
+      )}
+
+      {/* Drop indicator - RIGHT side (column will be inserted AFTER this one) */}
+      {isDropTarget && dropPosition === 'right' && (
+        <div className="absolute -right-2 top-0 bottom-0 w-1 bg-primary rounded-full shadow-lg z-20" />
       )}
 
       <div className="relative">

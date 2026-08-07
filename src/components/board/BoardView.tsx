@@ -34,6 +34,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
   const [columns, setColumns] = useState<ColumnData[]>(initialBoard.columns);
   const [activeColumn, setActiveColumn] = useState<ColumnData | null>(null);
   const [activeTask, setActiveTask] = useState<TaskData | null>(null);
+  const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
   const updateCounterRef = useRef(0);
 
   // Log initial state
@@ -55,6 +56,23 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
       taskIds: c.tasks.map(t => t.id)
     })));
   }, [columns]);
+
+  // Track mouse position during drag
+  useEffect(() => {
+    if (!activeColumn && !activeTask) {
+      setMousePosition(null);
+      return;
+    }
+
+    const handlePointerMove = (e: PointerEvent) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+
+    document.addEventListener('pointermove', handlePointerMove);
+    return () => {
+      document.removeEventListener('pointermove', handlePointerMove);
+    };
+  }, [activeColumn, activeTask]);
 
   // Droppable container for dropping at the end of columns
   const { setNodeRef: setContainerRef, isOver: isContainerOver } = useDroppable({
@@ -116,6 +134,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
       console.log('  ❌ No over target');
       setActiveColumn(null);
       setActiveTask(null);
+      setMousePosition(null);
       return;
     }
 
@@ -124,12 +143,14 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
 
     console.log('  activeId:', activeId);
     console.log('  overId:', overId);
+    console.log('  mousePosition at drop:', mousePosition);
 
     // If dropping on the same element, do nothing
     if (activeId === overId) {
       console.log('  ⏭️ Same element, skipping');
       setActiveColumn(null);
       setActiveTask(null);
+      setMousePosition(null);
       return;
     }
 
@@ -175,9 +196,11 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
 
         if (overElement) {
           const rect = overElement.getBoundingClientRect();
+          
+          // Use the tracked mouse position (current position at drop time)
           let mouseX = rect.left + rect.width / 2;
-          if ((event as any).activatorEvent) {
-            mouseX = (event as any).activatorEvent.clientX;
+          if (mousePosition) {
+            mouseX = mousePosition.x;
           }
           const isLeftHalf = mouseX < rect.left + rect.width / 2;
 
@@ -189,19 +212,23 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
           if (oldIndex < newIndex) {
             // Moving right
             if (isLeftHalf) {
-              insertIndex = newIndex - 1;
+              // Dropping on left half: insert before target (newIndex - 1)
+              insertIndex = Math.max(0, newIndex - 1);
               console.log('  Moving right, left half -> insertIndex:', insertIndex);
             } else {
+              // Dropping on right half: insert after target (newIndex)
               insertIndex = newIndex;
               console.log('  Moving right, right half -> insertIndex:', insertIndex);
             }
           } else if (oldIndex > newIndex) {
             // Moving left
             if (isLeftHalf) {
+              // Dropping on left half: insert before target (newIndex)
               insertIndex = newIndex;
               console.log('  Moving left, left half -> insertIndex:', insertIndex);
             } else {
-              insertIndex = newIndex + 1;
+              // Dropping on right half: insert after target (newIndex + 1)
+              insertIndex = Math.min(columns.length - 1, newIndex + 1);
               console.log('  Moving left, right half -> insertIndex:', insertIndex);
             }
           } else {
@@ -242,6 +269,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
 
         setActiveColumn(null);
         setActiveTask(null);
+        setMousePosition(null);
         return;
       }
 
@@ -266,12 +294,14 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
 
         setActiveColumn(null);
         setActiveTask(null);
+        setMousePosition(null);
         return;
       }
 
       console.log('  ⚠️ Unhandled overId:', overId);
       setActiveColumn(null);
       setActiveTask(null);
+      setMousePosition(null);
       return;
     }
 
@@ -288,6 +318,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
         console.log('  ❌ Source column not found');
         setActiveColumn(null);
         setActiveTask(null);
+        setMousePosition(null);
         return;
       }
       const sourceColumn = columns[sourceColumnIndex];
@@ -299,6 +330,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
         console.log('  ❌ Task not found in source column');
         setActiveColumn(null);
         setActiveTask(null);
+        setMousePosition(null);
         return;
       }
 
@@ -316,6 +348,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
             console.log('  ❌ Destination task not found');
             setActiveColumn(null);
             setActiveTask(null);
+            setMousePosition(null);
             return;
           }
 
@@ -323,6 +356,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
             console.log('  ⏭️ Same position, skipping');
             setActiveColumn(null);
             setActiveTask(null);
+            setMousePosition(null);
             return;
           }
 
@@ -342,6 +376,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
 
           setActiveColumn(null);
           setActiveTask(null);
+          setMousePosition(null);
           return;
         }
 
@@ -352,6 +387,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
           console.log('  ❌ Destination column not found');
           setActiveColumn(null);
           setActiveTask(null);
+          setMousePosition(null);
           return;
         }
         const destColumn = columns[destColumnIndex];
@@ -379,6 +415,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
 
         setActiveColumn(null);
         setActiveTask(null);
+        setMousePosition(null);
         return;
       }
 
@@ -391,6 +428,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
           console.log('  ❌ Destination column not found');
           setActiveColumn(null);
           setActiveTask(null);
+          setMousePosition(null);
           return;
         }
 
@@ -398,6 +436,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
           console.log('  ⏭️ Dropping on same column (empty space), skipping');
           setActiveColumn(null);
           setActiveTask(null);
+          setMousePosition(null);
           return;
         }
 
@@ -421,6 +460,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
 
         setActiveColumn(null);
         setActiveTask(null);
+        setMousePosition(null);
         return;
       }
 
@@ -449,6 +489,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
 
     setActiveColumn(null);
     setActiveTask(null);
+    setMousePosition(null);
   };
 
   return (
@@ -470,8 +511,9 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
           </div>
         </SortableContext>
         <div
-          className={`h-16 w-full mt-2 rounded-lg border-2 border-dashed transition-colors ${isContainerOver ? 'border-primary bg-primary/10' : 'border-transparent'
-            }`}
+          className={`h-16 w-full mt-2 rounded-lg border-2 border-dashed transition-colors ${
+            isContainerOver ? 'border-primary bg-primary/10' : 'border-transparent'
+          }`}
         />
       </div>
       <DragOverlay>
