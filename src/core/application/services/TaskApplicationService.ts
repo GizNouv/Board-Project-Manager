@@ -26,21 +26,31 @@ export class TaskApplicationService {
   ) { }
 
   async createTask(dto: CreateTaskDTO): Promise<Result<BaseTask>> {
-    // Load the board that contains the target column
+    console.log('🔵 TaskApplicationService.createTask() called');
+    console.log('  Column ID:', dto.columnId);
+    console.log('  Task Title:', dto.title);
+
     const boardResult = await this.boardRepository.findBoardByColumnId(new ColumnId(dto.columnId));
     if (boardResult.isFailure()) {
+      console.log('  ❌ Board not found for column');
       return ResultFactory.failure(boardResult.error);
     }
 
     const board = boardResult.value;
+    console.log('  Board loaded:', board.id.toString(), board.title);
+    console.log('  Columns in board:', board.columns.map(c => ({
+      id: c.id.toString(),
+      title: c.title,
+      taskCount: c.tasks.length
+    })));
 
-    // Find the target column in the board
     const column = board.findColumn(new ColumnId(dto.columnId));
     if (!column) {
+      console.log('  ❌ Column not found in board');
       return ResultFactory.failure(new EntityNotFoundException('Column', dto.columnId));
     }
+    console.log('  Column found:', column.id.toString(), column.title, 'tasks:', column.tasks.length);
 
-    // Create the task using TaskFactory
     const task = TaskFactory.createTask(
       dto.type.toLowerCase() as TaskType,
       {
@@ -53,16 +63,19 @@ export class TaskApplicationService {
         complexity: dto.complexity
       }
     );
+    console.log('  Task created:', task.id.toString(), task.type);
 
-    // Add task to column (validates movement)
-    column.addTask(task);
+    console.log('  Calling column.addTask() with skipValidation=true');
+    column.addTask(task, true);
+    console.log('  ✅ Task added to column');
 
-    // Persist the entire board aggregate
     const saveResult = await this.boardRepository.saveBoardWithColumns(board);
     if (saveResult.isFailure()) {
+      console.log('  ❌ Failed to save board');
       return ResultFactory.failure(saveResult.error);
     }
 
+    console.log('  ✅ Board saved successfully');
     return ResultFactory.success(task);
   }
 

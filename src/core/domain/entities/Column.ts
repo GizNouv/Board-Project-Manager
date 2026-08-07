@@ -57,7 +57,7 @@ export class Column extends Entity<ColumnId> {
     this._updatedAt = new Date();
   }
 
-  public addTask(task: BaseTask): void {
+  public addTask(task: BaseTask, skipValidation: boolean = false): void {
     if (!task) {
       throw new ValidationException('Task cannot be null');
     }
@@ -66,14 +66,18 @@ export class Column extends Entity<ColumnId> {
       throw new DuplicateEntityException('Task', task.id.toString());
     }
 
-    if (!task.canMoveTo(this._title)) {
-      throw new ValidationException(`Task cannot be moved to column "${this._title}"`);
+    // Skip validation if requested (used during task creation and DB loading)
+    if (!skipValidation) {
+      const canMove = task.canMoveTo(this._title);
+      if (!canMove) {
+        throw new ValidationException(`Task cannot be moved to column "${this._title}"`);
+      }
     }
 
     this._tasks.push(task);
     this._updatedAt = new Date();
   }
-
+  
   public removeTask(taskId: TaskId): void {
     const taskIndex = this._tasks.findIndex(t => t.id.equals(taskId));
     if (taskIndex === -1) {
@@ -100,7 +104,7 @@ export class Column extends Entity<ColumnId> {
 
     // Remove from current column
     this.removeTask(taskId);
-    
+
     // Add to target column
     targetColumn.addTask(task);
   }

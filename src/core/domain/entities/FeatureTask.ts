@@ -67,15 +67,27 @@ export class FeatureTask extends BaseTask {
   }
 
   public override canMoveTo(columnTitle: string): boolean {
+    console.log('🔵 FeatureTask.canMoveTo() called');
+    console.log('  Column Title:', columnTitle);
+    console.log('  Task ID:', this.id.toString());
+    console.log('  Dependencies:', this._dependencies.length);
+
     const normalized = this.normalizeColumnTitle(columnTitle);
+    console.log('  Normalized:', normalized);
+
     const validColumns = ['backlog', 'todo', 'inprogress', 'review', 'done'];
+    console.log('  Valid Columns:', validColumns);
+    console.log('  Is in valid columns?', validColumns.includes(normalized));
 
     const hasDependencies = this._dependencies.length > 0;
     if (hasDependencies && normalized === 'done') {
+      console.log('  ❌ Has dependencies and moving to done - blocked');
       return false;
     }
 
-    return validColumns.includes(normalized);
+    const result = validColumns.includes(normalized);
+    console.log('  ✅ Final result:', result);
+    return result;
   }
 
   public override badgeColor(): string {
