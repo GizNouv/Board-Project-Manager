@@ -64,7 +64,7 @@ const moveTaskSchema = z.object({
     sourceColumnId: z.string().min(1, 'Source column ID is required'),
     targetColumnId: z.string().min(1, 'Target column ID is required'),
     targetOrder: z.number().min(0, 'Target order must be positive'),
-    sourceTaskIds: z.array(z.string()).min(1, 'Source task IDs are required'),
+    sourceTaskIds: z.array(z.string()), // Empty array is allowed (source column becomes empty)
     targetTaskIds: z.array(z.string()).min(1, 'Target task IDs are required'),
 });
 
@@ -170,7 +170,6 @@ export async function reorderTasksAction(input: ReorderTasksInput): Promise<Acti
             };
         }
 
-        // Revalidate the board page
         const boardResult = await boardRepository.findBoardByColumnId(new ColumnId(columnId));
         if (boardResult.isSuccess()) {
             const board = boardResult.value;
@@ -193,13 +192,19 @@ export async function reorderTasksAction(input: ReorderTasksInput): Promise<Acti
 // ============== MOVE TASK ACTION ==============
 
 export async function moveTaskAction(input: MoveTaskInput): Promise<ActionResult<void>> {
-    console.log('🔵 moveTaskAction called');
-    console.log('  input:', input);
+    console.log('🔵 [MOVE ACTION]');
+    console.log('  taskId:', input.taskId);
+    console.log('  sourceColumnId:', input.sourceColumnId);
+    console.log('  targetColumnId:', input.targetColumnId);
+    console.log('  targetOrder:', input.targetOrder);
+    console.log('  sourceTaskIds:', input.sourceTaskIds);
+    console.log('  targetTaskIds:', input.targetTaskIds);
 
     try {
         const validationResult = moveTaskSchema.safeParse(input);
         if (!validationResult.success) {
             const firstError = validationResult.error.issues[0];
+            console.log('[MOVE ACTION] ❌ Validation failed:', firstError.message);
             return {
                 success: false,
                 message: firstError.message,
@@ -215,6 +220,8 @@ export async function moveTaskAction(input: MoveTaskInput): Promise<ActionResult
             targetTaskIds
         } = validationResult.data;
 
+        console.log('[MOVE ACTION] Validation passed, calling boardService.moveTask...');
+
         const boardRepository = new PrismaBoardRepository();
         const columnRepository = new PrismaColumnRepository();
         const boardService = new BoardApplicationService(boardRepository, columnRepository);
@@ -229,13 +236,15 @@ export async function moveTaskAction(input: MoveTaskInput): Promise<ActionResult
         );
 
         if (!result.isSuccess()) {
+            console.log('[MOVE ACTION] ❌ boardService.moveTask failed:', result.error.message);
             return {
                 success: false,
                 message: result.error.message,
             };
         }
 
-        // Revalidate the board page
+        console.log('[MOVE ACTION] ✅ boardService.moveTask succeeded');
+
         const boardResult = await boardRepository.findBoardByColumnId(new ColumnId(sourceColumnId));
         if (boardResult.isSuccess()) {
             const board = boardResult.value;
@@ -247,7 +256,7 @@ export async function moveTaskAction(input: MoveTaskInput): Promise<ActionResult
             data: undefined,
         };
     } catch (error) {
-        console.error('❌ moveTaskAction error:', error);
+        console.error('[MOVE ACTION] ❌ Error:', error);
         return {
             success: false,
             message: error instanceof Error ? error.message : 'An unexpected error occurred while moving the task',

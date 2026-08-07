@@ -96,7 +96,6 @@ export class BoardApplicationService {
 
     const board = boardResult.value;
 
-    // Calculate the next order value based on existing columns
     const existingColumns = board.columns;
     const nextOrder = existingColumns.length > 0
       ? Math.max(...existingColumns.map(col => col.order)) + 1
@@ -183,11 +182,14 @@ export class BoardApplicationService {
     columnId: string,
     orderedTaskIds: string[]
   ): Promise<Result<void>> {
+    console.log('[MOVE SERVICE] reorderTasks called');
+    console.log('  columnId:', columnId);
+    console.log('  orderedTaskIds:', orderedTaskIds);
+
     if (!orderedTaskIds || orderedTaskIds.length === 0) {
       return ResultFactory.failure(new ValidationException('Ordered task IDs cannot be empty'));
     }
 
-    // Verify no duplicates
     const uniqueIds = new Set(orderedTaskIds);
     if (uniqueIds.size !== orderedTaskIds.length) {
       return ResultFactory.failure(new ValidationException('Duplicate task IDs in order list'));
@@ -207,10 +209,16 @@ export class BoardApplicationService {
     sourceTaskIds: string[],
     targetTaskIds: string[]
   ): Promise<Result<void>> {
-    if (!sourceTaskIds || sourceTaskIds.length === 0) {
-      return ResultFactory.failure(new ValidationException('Source task IDs cannot be empty'));
-    }
+    console.log('[MOVE SERVICE]');
+    console.log('  taskId:', taskId);
+    console.log('  sourceColumnId:', sourceColumnId);
+    console.log('  targetColumnId:', targetColumnId);
+    console.log('  targetOrder:', targetOrder);
+    console.log('  sourceTaskIds:', sourceTaskIds);
+    console.log('  targetTaskIds:', targetTaskIds);
 
+    // Allow source column to become empty
+    // Only validate target column has tasks
     if (!targetTaskIds || targetTaskIds.length === 0) {
       return ResultFactory.failure(new ValidationException('Target task IDs cannot be empty'));
     }
@@ -233,16 +241,12 @@ export class BoardApplicationService {
       return ResultFactory.failure(new ValidationException('Task IDs overlap between source and target'));
     }
 
-    // Verify taskId is in sourceTaskIds
-    if (!sourceTaskIds.includes(taskId)) {
-      return ResultFactory.failure(new ValidationException('Task ID not found in source task IDs'));
-    }
-
     // Verify targetOrder is within bounds
     if (targetOrder < 0 || targetOrder > targetTaskIds.length) {
       return ResultFactory.failure(new ValidationException('Target order out of bounds'));
     }
 
+    console.log('[MOVE SERVICE] Validation passed, calling repository.moveTask...');
     return await this.boardRepository.moveTask(
       new TaskId(taskId),
       new ColumnId(sourceColumnId),

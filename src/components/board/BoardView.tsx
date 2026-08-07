@@ -235,7 +235,6 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
           const newColumns = arrayMove(columns, oldIndex, insertIndex);
           setColumns(newColumns);
 
-          // 🔥 PERSISTENCE: Call Server Action
           console.log('🔵 CALLING reorderColumnsAction');
           console.log('  boardId:', boardId);
           console.log('  columnId:', activeColId);
@@ -278,7 +277,6 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
           newColumns.push(movedColumn);
           setColumns(newColumns);
 
-          // 🔥 PERSISTENCE: Call Server Action
           const insertIndex = columns.length - 1;
           console.log('🔵 CALLING reorderColumnsAction (end)');
           console.log('  boardId:', boardId);
@@ -390,7 +388,6 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
           console.log('  newColumns updated');
           setColumns(newColumns);
 
-          // 🔥 PERSISTENCE: Call reorderTasksAction
           const orderedTaskIds = newTasks.map(t => t.id);
           console.log('🔵 CALLING reorderTasksAction');
           console.log('  columnId:', activeColumnId);
@@ -450,7 +447,6 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
         console.log('  newColumns updated');
         setColumns(newColumns);
 
-        // 🔥 PERSISTENCE: Call moveTaskAction
         console.log('🔵 CALLING moveTaskAction');
         console.log('  taskId:', activeTaskId);
         console.log('  sourceColumnId:', activeColumnId);
@@ -510,17 +506,23 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
         const destColumn = columns[destColumnIndex];
 
         const sourceTasks = [...sourceColumn.tasks];
+        console.log('[DnD] sourceTasks BEFORE splice:', sourceTasks.map(t => t.id));
         const [movedTask] = sourceTasks.splice(sourceTaskIndex, 1);
-        console.log('  removed task:', movedTask.id);
+        console.log('[DnD] movedTask:', movedTask.id);
+        console.log('[DnD] sourceTasks AFTER splice:', sourceTasks.map(t => t.id));
+        console.log('[DnD] sourceTaskIds (to send):', sourceTasks.map(t => t.id));
+
         const destTasks = [...destColumn.tasks];
+        console.log('[DnD] destTasks BEFORE push:', destTasks.map(t => t.id));
         destTasks.push(movedTask);
-        console.log('  destTasks after push:', destTasks.map(t => t.id));
+        console.log('[DnD] destTasks AFTER push:', destTasks.map(t => t.id));
+        console.log('[DnD] targetTaskIds (to send):', destTasks.map(t => t.id));
 
         const newColumns = [...columns];
         newColumns[sourceColumnIndex] = { ...sourceColumn, tasks: sourceTasks };
         newColumns[destColumnIndex] = { ...destColumn, tasks: destTasks };
 
-        console.log('  newColumns updated');
+        console.log('[DnD] newColumns updated');
         setColumns(newColumns);
 
         // 🔥 PERSISTENCE: Call moveTaskAction (dropping at end)
@@ -578,7 +580,6 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
         console.log('  newColumns updated');
         setColumns(newColumns);
 
-        // 🔥 PERSISTENCE: Call moveTaskAction (dropping into container)
         console.log('🔵 CALLING moveTaskAction (drop into container)');
         console.log('  taskId:', activeTaskId);
         console.log('  sourceColumnId:', activeColumnId);

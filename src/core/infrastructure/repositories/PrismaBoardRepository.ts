@@ -328,7 +328,7 @@ export class PrismaBoardRepository implements IBoardRepository {
     }
   }
 
-  // ============== NEW DEDICATED TASK PERSISTENCE METHODS ==============
+  // ============== DEDICATED TASK PERSISTENCE METHODS ==============
 
   async reorderTasks(
     columnId: ColumnId,
@@ -340,7 +340,6 @@ export class PrismaBoardRepository implements IBoardRepository {
 
     try {
       await prisma.$transaction(async (tx) => {
-        // Step 1: Get all tasks in the column
         const existingTasks = await tx.task.findMany({
           where: { columnId: columnId.toString() },
         });
@@ -348,7 +347,6 @@ export class PrismaBoardRepository implements IBoardRepository {
         const existingTaskIds = new Set(existingTasks.map((t) => t.id));
         const taskIdsSet = new Set(orderedTaskIds);
 
-        // Verify all orderedTaskIds exist in the column
         for (const taskId of orderedTaskIds) {
           if (!existingTaskIds.has(taskId)) {
             throw new ValidationException(
@@ -357,7 +355,6 @@ export class PrismaBoardRepository implements IBoardRepository {
           }
         }
 
-        // Verify no extra tasks in the column (all tasks accounted for)
         for (const task of existingTasks) {
           if (!taskIdsSet.has(task.id)) {
             throw new ValidationException(
@@ -366,7 +363,6 @@ export class PrismaBoardRepository implements IBoardRepository {
           }
         }
 
-        // Step 2: Temporarily assign negative order values
         const tempOrderOffset = -10000;
         for (let i = 0; i < existingTasks.length; i++) {
           const task = existingTasks[i];
@@ -376,7 +372,6 @@ export class PrismaBoardRepository implements IBoardRepository {
           });
         }
 
-        // Step 3: Assign final order values based on array position
         for (let i = 0; i < orderedTaskIds.length; i++) {
           const taskId = orderedTaskIds[i];
           await tx.task.update({
@@ -405,7 +400,7 @@ export class PrismaBoardRepository implements IBoardRepository {
     sourceTaskIds: string[],
     targetTaskIds: string[]
   ): Promise<Result<void>> {
-    console.log('🔵 moveTask called');
+    console.log('[MOVE REPOSITORY]');
     console.log('  taskId:', taskId.toString());
     console.log('  sourceColumnId:', sourceColumnId.toString());
     console.log('  targetColumnId:', targetColumnId.toString());
@@ -419,6 +414,11 @@ export class PrismaBoardRepository implements IBoardRepository {
         const task = await tx.task.findUnique({
           where: { id: taskId.toString() },
         });
+
+        console.log('[MOVE DB BEFORE]');
+        console.log('  task.id:', task?.id);
+        console.log('  task.columnId:', task?.columnId);
+        console.log('  task.order:', task?.order);
 
         if (!task) {
           throw new EntityNotFoundException('Task', taskId.toString());
@@ -495,8 +495,16 @@ export class PrismaBoardRepository implements IBoardRepository {
           },
         });
 
+        const movedTask = await tx.task.findUnique({
+          where: { id: taskId.toString() },
+        });
+
+        console.log('[MOVE DB AFTER COLUMN CHANGE]');
+        console.log('  task.id:', movedTask?.id);
+        console.log('  task.columnId:', movedTask?.columnId);
+        console.log('  task.order:', movedTask?.order);
+
         // Step 8: Reindex destination column
-        // Get all tasks in destination column (including the moved task)
         const destExistingTasks = await tx.task.findMany({
           where: { columnId: targetColumnId.toString() },
         });
@@ -504,7 +512,6 @@ export class PrismaBoardRepository implements IBoardRepository {
         const destExistingIds = destExistingTasks.map(t => t.id);
 
         // Verify all targetTaskIds exist in destination column
-        // (including the moved task which was just moved)
         for (const id of targetTaskIds) {
           if (!destExistingIds.includes(id)) {
             throw new ValidationException(`Task ${id} does not exist in destination column`);
@@ -527,12 +534,33 @@ export class PrismaBoardRepository implements IBoardRepository {
             data: { order: i },
           });
         }
+
+        // Step 9: Final verification
+        const sourceAfter = await tx.task.findMany({
+          where: { columnId: sourceColumnId.toString() },
+          orderBy: { order: 'asc' },
+        });
+
+        const targetAfter = await tx.task.findMany({
+          where: { columnId: targetColumnId.toString() },
+          orderBy: { order: 'asc' },
+        });
+
+        console.log('[MOVE FINAL SOURCE]');
+        sourceAfter.forEach(t => {
+          console.log(`  ${t.id}: order=${t.order}, columnId=${t.columnId}`);
+        });
+
+        console.log('[MOVE FINAL TARGET]');
+        targetAfter.forEach(t => {
+          console.log(`  ${t.id}: order=${t.order}, columnId=${t.columnId}`);
+        });
       });
 
-      console.log('  ✅ moveTask completed successfully');
+      console.log('[MOVE REPOSITORY] ✅ Transaction completed');
       return ResultFactory.success(undefined);
     } catch (error) {
-      console.error('  ❌ moveTask failed:', error);
+      console.error('[MOVE REPOSITORY] ❌ Failed:', error);
       if (error instanceof DomainException) {
         return ResultFactory.failure(error);
       }
