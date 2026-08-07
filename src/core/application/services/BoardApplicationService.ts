@@ -10,7 +10,8 @@ import {
   ResultFactory,
   EntityNotFoundException,
   ValidationException,
-  DuplicateEntityException
+  DuplicateEntityException,
+  TaskId
 } from '../../domain';
 import { CreateBoardDTO, UpdateBoardDTO, CreateColumnDTO, UpdateColumnDTO } from '../dto/BoardDTOs';
 
@@ -174,5 +175,81 @@ export class BoardApplicationService {
 
   async reorderColumn(columnId: string, newPosition: number): Promise<Result<void>> {
     return await this.columnRepository.reorderColumn(new ColumnId(columnId), newPosition);
+  }
+
+  // ============== DEDICATED TASK PERSISTENCE METHODS ==============
+
+  async reorderTasks(
+    columnId: string,
+    orderedTaskIds: string[]
+  ): Promise<Result<void>> {
+    if (!orderedTaskIds || orderedTaskIds.length === 0) {
+      return ResultFactory.failure(new ValidationException('Ordered task IDs cannot be empty'));
+    }
+
+    // Verify no duplicates
+    const uniqueIds = new Set(orderedTaskIds);
+    if (uniqueIds.size !== orderedTaskIds.length) {
+      return ResultFactory.failure(new ValidationException('Duplicate task IDs in order list'));
+    }
+
+    return await this.boardRepository.reorderTasks(
+      new ColumnId(columnId),
+      orderedTaskIds
+    );
+  }
+
+  async moveTask(
+    taskId: string,
+    sourceColumnId: string,
+    targetColumnId: string,
+    targetOrder: number,
+    sourceTaskIds: string[],
+    targetTaskIds: string[]
+  ): Promise<Result<void>> {
+    if (!sourceTaskIds || sourceTaskIds.length === 0) {
+      return ResultFactory.failure(new ValidationException('Source task IDs cannot be empty'));
+    }
+
+    if (!targetTaskIds || targetTaskIds.length === 0) {
+      return ResultFactory.failure(new ValidationException('Target task IDs cannot be empty'));
+    }
+
+    // Verify source task IDs are unique
+    const sourceUnique = new Set(sourceTaskIds);
+    if (sourceUnique.size !== sourceTaskIds.length) {
+      return ResultFactory.failure(new ValidationException('Duplicate source task IDs'));
+    }
+
+    // Verify target task IDs are unique
+    const targetUnique = new Set(targetTaskIds);
+    if (targetUnique.size !== targetTaskIds.length) {
+      return ResultFactory.failure(new ValidationException('Duplicate target task IDs'));
+    }
+
+    // Verify no overlap between source and target
+    const overlap = sourceTaskIds.some(id => targetTaskIds.includes(id));
+    if (overlap) {
+      return ResultFactory.failure(new ValidationException('Task IDs overlap between source and target'));
+    }
+
+    // Verify taskId is in sourceTaskIds
+    if (!sourceTaskIds.includes(taskId)) {
+      return ResultFactory.failure(new ValidationException('Task ID not found in source task IDs'));
+    }
+
+    // Verify targetOrder is within bounds
+    if (targetOrder < 0 || targetOrder > targetTaskIds.length) {
+      return ResultFactory.failure(new ValidationException('Target order out of bounds'));
+    }
+
+    return await this.boardRepository.moveTask(
+      new TaskId(taskId),
+      new ColumnId(sourceColumnId),
+      new ColumnId(targetColumnId),
+      targetOrder,
+      sourceTaskIds,
+      targetTaskIds
+    );
   }
 }

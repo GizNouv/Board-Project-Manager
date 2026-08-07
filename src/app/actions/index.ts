@@ -7,7 +7,7 @@ export {
 
 export {
   createTaskAction,
-  reorderTaskAction,
+  reorderTasksAction,
   moveTaskAction,
   type TaskDTO,
 } from './task';

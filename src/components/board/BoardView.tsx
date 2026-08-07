@@ -21,7 +21,7 @@ import {
 import { SortableColumn } from './SortableColumn';
 import { ColumnData, TaskData } from '@/types/kanban';
 import { reorderColumnsAction } from '@/app/actions/board';
-import { reorderTaskAction, moveTaskAction } from '@/app/actions/task';
+import { reorderTasksAction, moveTaskAction } from '@/app/actions/task';
 
 interface BoardViewProps {
   board: {
@@ -316,8 +316,302 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
       return;
     }
 
-    // Handle task dragging (persistence to be added similarly)
-    // ... (task drag logic remains unchanged)
+    // Handle task dragging
+    if (activeId.includes('-task-')) {
+      console.log('  📝 TASK DRAG');
+      const [activeColumnId, activeTaskId] = activeId.split('-task-');
+      console.log('  activeColumnId:', activeColumnId);
+      console.log('  activeTaskId:', activeTaskId);
+
+      // Find source column
+      const sourceColumnIndex = columns.findIndex(col => col.id === activeColumnId);
+      console.log('  sourceColumnIndex:', sourceColumnIndex);
+      if (sourceColumnIndex === -1) {
+        console.log('  ❌ Source column not found');
+        setActiveColumn(null);
+        setActiveTask(null);
+        setMousePosition(null);
+        return;
+      }
+      const sourceColumn = columns[sourceColumnIndex];
+      console.log('  sourceColumn:', sourceColumn.id, sourceColumn.title);
+
+      // Find task in source column
+      const sourceTaskIndex = sourceColumn.tasks.findIndex(t => t.id === activeTaskId);
+      console.log('  sourceTaskIndex:', sourceTaskIndex);
+      if (sourceTaskIndex === -1) {
+        console.log('  ❌ Task not found in source column');
+        setActiveColumn(null);
+        setActiveTask(null);
+        setMousePosition(null);
+        return;
+      }
+
+      // Save current state for rollback
+      const previousColumns = [...columns];
+
+      // Check if dropping on a task
+      if (overId.includes('-task-')) {
+        const [destColumnId, destTaskId] = overId.split('-task-');
+        console.log('  destColumnId:', destColumnId);
+        console.log('  destTaskId:', destTaskId);
+
+        // Same column reorder
+        if (activeColumnId === destColumnId) {
+          console.log('  🔄 SAME COLUMN REORDER');
+          const destTaskIndex = sourceColumn.tasks.findIndex(t => t.id === destTaskId);
+          console.log('  destTaskIndex:', destTaskIndex);
+
+          if (destTaskIndex === -1) {
+            console.log('  ❌ Destination task not found');
+            setActiveColumn(null);
+            setActiveTask(null);
+            setMousePosition(null);
+            return;
+          }
+
+          if (sourceTaskIndex === destTaskIndex) {
+            console.log('  ⏭️ Same position, skipping');
+            setActiveColumn(null);
+            setActiveTask(null);
+            setMousePosition(null);
+            return;
+          }
+
+          console.log('  📊 arrayMove from', sourceTaskIndex, 'to', destTaskIndex);
+          console.log('  tasks before:', sourceColumn.tasks.map(t => t.id));
+
+          const newTasks = arrayMove(sourceColumn.tasks, sourceTaskIndex, destTaskIndex);
+          console.log('  tasks after:', newTasks.map(t => t.id));
+
+          const newColumns = [...columns];
+          newColumns[sourceColumnIndex] = { ...sourceColumn, tasks: newTasks };
+
+          console.log('  newColumns updated');
+          setColumns(newColumns);
+
+          // 🔥 PERSISTENCE: Call reorderTasksAction
+          const orderedTaskIds = newTasks.map(t => t.id);
+          console.log('🔵 CALLING reorderTasksAction');
+          console.log('  columnId:', activeColumnId);
+          console.log('  orderedTaskIds:', orderedTaskIds);
+
+          reorderTasksAction({
+            columnId: activeColumnId,
+            orderedTaskIds: orderedTaskIds,
+          }).then((result) => {
+            console.log('  reorderTasksAction result:', result);
+            if (!result.success) {
+              console.log('  ❌ Failed to persist, rolling back...');
+              setColumns(previousColumns);
+            } else {
+              console.log('  ✅ Persisted successfully');
+            }
+          }).catch((error) => {
+            console.error('  ❌ reorderTasksAction error:', error);
+            setColumns(previousColumns);
+          });
+
+          setActiveColumn(null);
+          setActiveTask(null);
+          setMousePosition(null);
+          return;
+        }
+
+        // Cross-column move
+        console.log('  🔄 CROSS COLUMN MOVE');
+        const destColumnIndex = columns.findIndex(col => col.id === destColumnId);
+        console.log('  destColumnIndex:', destColumnIndex);
+        if (destColumnIndex === -1) {
+          console.log('  ❌ Destination column not found');
+          setActiveColumn(null);
+          setActiveTask(null);
+          setMousePosition(null);
+          return;
+        }
+        const destColumn = columns[destColumnIndex];
+
+        const destTaskIndex = destColumn.tasks.findIndex(t => t.id === destTaskId);
+        console.log('  destTaskIndex:', destTaskIndex);
+
+        const sourceTasks = [...sourceColumn.tasks];
+        const [movedTask] = sourceTasks.splice(sourceTaskIndex, 1);
+        console.log('  removed task:', movedTask.id);
+        console.log('  sourceTasks after removal:', sourceTasks.map(t => t.id));
+
+        const destTasks = [...destColumn.tasks];
+        destTasks.splice(destTaskIndex, 0, movedTask);
+        console.log('  destTasks after insertion:', destTasks.map(t => t.id));
+
+        const newColumns = [...columns];
+        newColumns[sourceColumnIndex] = { ...sourceColumn, tasks: sourceTasks };
+        newColumns[destColumnIndex] = { ...destColumn, tasks: destTasks };
+
+        console.log('  newColumns updated');
+        setColumns(newColumns);
+
+        // 🔥 PERSISTENCE: Call moveTaskAction
+        console.log('🔵 CALLING moveTaskAction');
+        console.log('  taskId:', activeTaskId);
+        console.log('  sourceColumnId:', activeColumnId);
+        console.log('  targetColumnId:', destColumnId);
+        console.log('  targetOrder:', destTaskIndex);
+        console.log('  sourceTaskIds:', sourceTasks.map(t => t.id));
+        console.log('  targetTaskIds:', destTasks.map(t => t.id));
+
+        moveTaskAction({
+          taskId: activeTaskId,
+          sourceColumnId: activeColumnId,
+          targetColumnId: destColumnId,
+          targetOrder: destTaskIndex,
+          sourceTaskIds: sourceTasks.map(t => t.id),
+          targetTaskIds: destTasks.map(t => t.id),
+        }).then((result) => {
+          console.log('  moveTaskAction result:', result);
+          if (!result.success) {
+            console.log('  ❌ Failed to persist, rolling back...');
+            setColumns(previousColumns);
+          } else {
+            console.log('  ✅ Persisted successfully');
+          }
+        }).catch((error) => {
+          console.error('  ❌ moveTaskAction error:', error);
+          setColumns(previousColumns);
+        });
+
+        setActiveColumn(null);
+        setActiveTask(null);
+        setMousePosition(null);
+        return;
+      }
+
+      // Dropping on a column (not a task)
+      if (!overId.includes('-task-') && overId !== 'columns-container') {
+        console.log('  📥 DROPPING ON COLUMN (not task)');
+        const destColumnId = overId;
+        const destColumnIndex = columns.findIndex(col => col.id === destColumnId);
+        console.log('  destColumnIndex:', destColumnIndex);
+        if (destColumnIndex === -1) {
+          console.log('  ❌ Destination column not found');
+          setActiveColumn(null);
+          setActiveTask(null);
+          setMousePosition(null);
+          return;
+        }
+
+        if (destColumnIndex === sourceColumnIndex) {
+          console.log('  ⏭️ Dropping on same column (empty space), skipping');
+          setActiveColumn(null);
+          setActiveTask(null);
+          setMousePosition(null);
+          return;
+        }
+
+        const destColumn = columns[destColumnIndex];
+
+        const sourceTasks = [...sourceColumn.tasks];
+        const [movedTask] = sourceTasks.splice(sourceTaskIndex, 1);
+        console.log('  removed task:', movedTask.id);
+        const destTasks = [...destColumn.tasks];
+        destTasks.push(movedTask);
+        console.log('  destTasks after push:', destTasks.map(t => t.id));
+
+        const newColumns = [...columns];
+        newColumns[sourceColumnIndex] = { ...sourceColumn, tasks: sourceTasks };
+        newColumns[destColumnIndex] = { ...destColumn, tasks: destTasks };
+
+        console.log('  newColumns updated');
+        setColumns(newColumns);
+
+        // 🔥 PERSISTENCE: Call moveTaskAction (dropping at end)
+        console.log('🔵 CALLING moveTaskAction (drop on column)');
+        console.log('  taskId:', activeTaskId);
+        console.log('  sourceColumnId:', activeColumnId);
+        console.log('  targetColumnId:', destColumnId);
+        console.log('  targetOrder:', destTasks.length - 1);
+        console.log('  sourceTaskIds:', sourceTasks.map(t => t.id));
+        console.log('  targetTaskIds:', destTasks.map(t => t.id));
+
+        moveTaskAction({
+          taskId: activeTaskId,
+          sourceColumnId: activeColumnId,
+          targetColumnId: destColumnId,
+          targetOrder: destTasks.length - 1,
+          sourceTaskIds: sourceTasks.map(t => t.id),
+          targetTaskIds: destTasks.map(t => t.id),
+        }).then((result) => {
+          console.log('  moveTaskAction result:', result);
+          if (!result.success) {
+            console.log('  ❌ Failed to persist, rolling back...');
+            setColumns(previousColumns);
+          } else {
+            console.log('  ✅ Persisted successfully');
+          }
+        }).catch((error) => {
+          console.error('  ❌ moveTaskAction error:', error);
+          setColumns(previousColumns);
+        });
+
+        setActiveColumn(null);
+        setActiveTask(null);
+        setMousePosition(null);
+        return;
+      }
+
+      // Dropping task into the container (at the end of the last column)
+      if (overId === 'columns-container') {
+        console.log('  📥 DROPPING INTO CONTAINER');
+        const lastColumnIndex = columns.length - 1;
+        const lastColumn = columns[lastColumnIndex];
+        console.log('  lastColumn:', lastColumn.id);
+        const sourceTasks = [...sourceColumn.tasks];
+        const [movedTask] = sourceTasks.splice(sourceTaskIndex, 1);
+        console.log('  removed task:', movedTask.id);
+        const lastTasks = [...lastColumn.tasks];
+        lastTasks.push(movedTask);
+        console.log('  lastTasks after push:', lastTasks.map(t => t.id));
+
+        const newColumns = [...columns];
+        newColumns[sourceColumnIndex] = { ...sourceColumn, tasks: sourceTasks };
+        newColumns[lastColumnIndex] = { ...lastColumn, tasks: lastTasks };
+
+        console.log('  newColumns updated');
+        setColumns(newColumns);
+
+        // 🔥 PERSISTENCE: Call moveTaskAction (dropping into container)
+        console.log('🔵 CALLING moveTaskAction (drop into container)');
+        console.log('  taskId:', activeTaskId);
+        console.log('  sourceColumnId:', activeColumnId);
+        console.log('  targetColumnId:', lastColumn.id);
+        console.log('  targetOrder:', lastTasks.length - 1);
+        console.log('  sourceTaskIds:', sourceTasks.map(t => t.id));
+        console.log('  targetTaskIds:', lastTasks.map(t => t.id));
+
+        moveTaskAction({
+          taskId: activeTaskId,
+          sourceColumnId: activeColumnId,
+          targetColumnId: lastColumn.id,
+          targetOrder: lastTasks.length - 1,
+          sourceTaskIds: sourceTasks.map(t => t.id),
+          targetTaskIds: lastTasks.map(t => t.id),
+        }).then((result) => {
+          console.log('  moveTaskAction result:', result);
+          if (!result.success) {
+            console.log('  ❌ Failed to persist, rolling back...');
+            setColumns(previousColumns);
+          } else {
+            console.log('  ✅ Persisted successfully');
+          }
+        }).catch((error) => {
+          console.error('  ❌ moveTaskAction error:', error);
+          setColumns(previousColumns);
+        });
+      }
+    }
+
+    setActiveColumn(null);
+    setActiveTask(null);
+    setMousePosition(null);
   };
 
   return (

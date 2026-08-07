@@ -6,6 +6,7 @@ import { TaskApplicationService } from '@/core/application/services/TaskApplicat
 import { PrismaTaskRepository } from '@/core/infrastructure/repositories/PrismaTaskRepository';
 import { PrismaColumnRepository } from '@/core/infrastructure/repositories/PrismaColumnRepository';
 import { PrismaBoardRepository } from '@/core/infrastructure/repositories/PrismaBoardRepository';
+import { BoardApplicationService } from '@/core/application/services/BoardApplicationService';
 import { ROUTES } from '@/config/routes';
 import { ResultFactory, ValidationException, TaskId, ColumnId } from '@/core/domain';
 
@@ -47,22 +48,29 @@ const createTaskSchema = z.object({
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 
-const reorderTaskSchema = z.object({
+// ============== REORDER TASKS SCHEMA ==============
+
+const reorderTasksSchema = z.object({
     columnId: z.string().min(1, 'Column ID is required'),
-    taskId: z.string().min(1, 'Task ID is required'),
-    newOrder: z.number().min(0, 'Order must be a positive number'),
+    orderedTaskIds: z.array(z.string()).min(1, 'At least one task ID is required'),
 });
 
-export type ReorderTaskInput = z.infer<typeof reorderTaskSchema>;
+export type ReorderTasksInput = z.infer<typeof reorderTasksSchema>;
+
+// ============== MOVE TASK SCHEMA ==============
 
 const moveTaskSchema = z.object({
     taskId: z.string().min(1, 'Task ID is required'),
-    fromColumnId: z.string().min(1, 'Source column ID is required'),
-    toColumnId: z.string().min(1, 'Destination column ID is required'),
-    newOrder: z.number().optional(),
+    sourceColumnId: z.string().min(1, 'Source column ID is required'),
+    targetColumnId: z.string().min(1, 'Target column ID is required'),
+    targetOrder: z.number().min(0, 'Target order must be positive'),
+    sourceTaskIds: z.array(z.string()).min(1, 'Source task IDs are required'),
+    targetTaskIds: z.array(z.string()).min(1, 'Target task IDs are required'),
 });
 
 export type MoveTaskInput = z.infer<typeof moveTaskSchema>;
+
+// ============== CREATE TASK ==============
 
 export async function createTaskAction(input: CreateTaskInput): Promise<ActionResult<TaskDTO>> {
     try {
@@ -131,12 +139,14 @@ export async function createTaskAction(input: CreateTaskInput): Promise<ActionRe
     }
 }
 
-/**
- * Server Action for reordering tasks within the same column
- */
-export async function reorderTaskAction(input: ReorderTaskInput): Promise<ActionResult<void>> {
+// ============== REORDER TASKS ACTION ==============
+
+export async function reorderTasksAction(input: ReorderTasksInput): Promise<ActionResult<void>> {
+    console.log('🔵 reorderTasksAction called');
+    console.log('  input:', input);
+
     try {
-        const validationResult = reorderTaskSchema.safeParse(input);
+        const validationResult = reorderTasksSchema.safeParse(input);
         if (!validationResult.success) {
             const firstError = validationResult.error.issues[0];
             return {
@@ -145,54 +155,47 @@ export async function reorderTaskAction(input: ReorderTaskInput): Promise<Action
             };
         }
 
-        const { columnId, taskId, newOrder } = validationResult.data;
+        const { columnId, orderedTaskIds } = validationResult.data;
 
         const boardRepository = new PrismaBoardRepository();
+        const columnRepository = new PrismaColumnRepository();
+        const boardService = new BoardApplicationService(boardRepository, columnRepository);
 
+        const result = await boardService.reorderTasks(columnId, orderedTaskIds);
+
+        if (!result.isSuccess()) {
+            return {
+                success: false,
+                message: result.error.message,
+            };
+        }
+
+        // Revalidate the board page
         const boardResult = await boardRepository.findBoardByColumnId(new ColumnId(columnId));
-        if (!boardResult.isSuccess()) {
-            return {
-                success: false,
-                message: boardResult.error.message,
-            };
+        if (boardResult.isSuccess()) {
+            const board = boardResult.value;
+            revalidatePath(`/boards/${board.id}`);
         }
-
-        const board = boardResult.value;
-        board.reorderTaskInColumn(new ColumnId(columnId), new TaskId(taskId), newOrder);
-
-        const saveResult = await boardRepository.saveBoardWithColumns(board);
-        if (!saveResult.isSuccess()) {
-            return {
-                success: false,
-                message: saveResult.error.message,
-            };
-        }
-
-        revalidatePath(`/boards/${board.id}`);
 
         return {
             success: true,
             data: undefined,
         };
     } catch (error) {
-        console.error('Reorder task action error:', error);
-        if (error instanceof ValidationException) {
-            return {
-                success: false,
-                message: error.message,
-            };
-        }
+        console.error('❌ reorderTasksAction error:', error);
         return {
             success: false,
-            message: 'An unexpected error occurred while reordering tasks',
+            message: error instanceof Error ? error.message : 'An unexpected error occurred while reordering tasks',
         };
     }
 }
 
-/**
- * Server Action for moving a task to another column
- */
+// ============== MOVE TASK ACTION ==============
+
 export async function moveTaskAction(input: MoveTaskInput): Promise<ActionResult<void>> {
+    console.log('🔵 moveTaskAction called');
+    console.log('  input:', input);
+
     try {
         const validationResult = moveTaskSchema.safeParse(input);
         if (!validationResult.success) {
@@ -203,51 +206,51 @@ export async function moveTaskAction(input: MoveTaskInput): Promise<ActionResult
             };
         }
 
-        const { taskId, fromColumnId, toColumnId, newOrder } = validationResult.data;
+        const {
+            taskId,
+            sourceColumnId,
+            targetColumnId,
+            targetOrder,
+            sourceTaskIds,
+            targetTaskIds
+        } = validationResult.data;
 
         const boardRepository = new PrismaBoardRepository();
+        const columnRepository = new PrismaColumnRepository();
+        const boardService = new BoardApplicationService(boardRepository, columnRepository);
 
-        const boardResult = await boardRepository.findBoardByColumnId(new ColumnId(fromColumnId));
-        if (!boardResult.isSuccess()) {
-            return {
-                success: false,
-                message: boardResult.error.message,
-            };
-        }
-
-        const board = boardResult.value;
-        board.moveTask(
-            new TaskId(taskId),
-            new ColumnId(fromColumnId),
-            new ColumnId(toColumnId),
-            newOrder
+        const result = await boardService.moveTask(
+            taskId,
+            sourceColumnId,
+            targetColumnId,
+            targetOrder,
+            sourceTaskIds,
+            targetTaskIds
         );
 
-        const saveResult = await boardRepository.saveBoardWithColumns(board);
-        if (!saveResult.isSuccess()) {
+        if (!result.isSuccess()) {
             return {
                 success: false,
-                message: saveResult.error.message,
+                message: result.error.message,
             };
         }
 
-        revalidatePath(`/boards/${board.id}`);
+        // Revalidate the board page
+        const boardResult = await boardRepository.findBoardByColumnId(new ColumnId(sourceColumnId));
+        if (boardResult.isSuccess()) {
+            const board = boardResult.value;
+            revalidatePath(`/boards/${board.id}`);
+        }
 
         return {
             success: true,
             data: undefined,
         };
     } catch (error) {
-        console.error('Move task action error:', error);
-        if (error instanceof ValidationException) {
-            return {
-                success: false,
-                message: error.message,
-            };
-        }
+        console.error('❌ moveTaskAction error:', error);
         return {
             success: false,
-            message: 'An unexpected error occurred while moving the task',
+            message: error instanceof Error ? error.message : 'An unexpected error occurred while moving the task',
         };
     }
 }

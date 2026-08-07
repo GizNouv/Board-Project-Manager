@@ -5,11 +5,13 @@ import {
   BoardId,
   UserId,
   ColumnId,
+  TaskId,
   Result,
   ResultFactory,
   EntityNotFoundException,
   DuplicateEntityException,
-  DomainException
+  DomainException,
+  ValidationException
 } from '../../domain';
 import { BoardMapper } from '../mappers/BoardMapper';
 import { ColumnMapper } from '../mappers/ColumnMapper';
@@ -31,7 +33,7 @@ export class PrismaBoardRepository implements IBoardRepository {
                 include: {
                   assignee: true
                 },
-                orderBy: { createdAt: 'asc' }
+                orderBy: { order: 'asc' }
               }
             }
           }
@@ -77,7 +79,7 @@ export class PrismaBoardRepository implements IBoardRepository {
                 include: {
                   assignee: true
                 },
-                orderBy: { createdAt: 'asc' }
+                orderBy: { order: 'asc' }
               }
             }
           }
@@ -102,7 +104,7 @@ export class PrismaBoardRepository implements IBoardRepository {
                 include: {
                   assignee: true
                 },
-                orderBy: { createdAt: 'asc' }
+                orderBy: { order: 'asc' }
               }
             }
           }
@@ -178,7 +180,7 @@ export class PrismaBoardRepository implements IBoardRepository {
                 include: {
                   assignee: true
                 },
-                orderBy: { createdAt: 'asc' }
+                orderBy: { order: 'asc' }
               }
             }
           }
@@ -195,34 +197,27 @@ export class PrismaBoardRepository implements IBoardRepository {
     }
   }
 
-  // In saveBoardWithColumns method, add logs:
-
   async saveBoardWithColumns(board: Board): Promise<Result<Board>> {
     console.log('🔵 saveBoardWithColumns called');
     console.log('  Board ID:', board.id.toString());
-    console.log('  Columns:', board.columns.map(c => ({
-      id: c.id.toString(),
-      title: c.title,
-      order: c.order,
-      taskCount: c.tasks.length
-    })));
 
     try {
       await prisma.$transaction(async (tx) => {
         // Step 1: Save board
         const boardData = this.boardMapper.toPersistence(board);
-        console.log('  📝 Upserting board:', boardData);
         await tx.board.upsert({
           where: { id: board.id.toString() },
           update: boardData,
           create: boardData,
         });
 
-        // Step 2: Get existing columns
+        // Step 2: Get existing columns with their tasks
         const existingColumns = await tx.column.findMany({
           where: { boardId: board.id.toString() },
+          include: {
+            tasks: true,
+          },
         });
-        console.log('  📋 Existing columns:', existingColumns.map(c => ({ id: c.id, order: c.order, title: c.title })));
 
         const existingColumnIds = new Set(existingColumns.map((c) => c.id));
         const boardColumns = board.columns;
@@ -231,31 +226,24 @@ export class PrismaBoardRepository implements IBoardRepository {
         const columnsToDelete = existingColumns.filter(
           (c) => !boardColumns.some((bc) => bc.id.toString() === c.id)
         );
-        console.log('  🗑️ Columns to delete:', columnsToDelete.map(c => c.id));
         for (const col of columnsToDelete) {
           await tx.column.delete({ where: { id: col.id } });
         }
 
-        // Step 4: First, reset all column orders to avoid unique constraint conflicts
-        // Set all existing columns to a temporary negative order
+        // Step 4: Reset column orders to avoid unique constraint conflicts
         const tempOrderOffset = -1000;
-        for (let i = 0; i < existingColumns.length; i++) {
-          const col = existingColumns[i];
+        const columnsToReset = existingColumns.filter((c) => existingColumnIds.has(c.id));
+        for (let i = 0; i < columnsToReset.length; i++) {
+          const col = columnsToReset[i];
           await tx.column.update({
             where: { id: col.id },
             data: { order: tempOrderOffset - i },
           });
         }
 
-        // Step 5: Now update/create columns with the correct order
+        // Step 5: Process each column
         for (const column of boardColumns) {
           const columnData = this.columnMapper.toPersistence(column);
-          console.log(`  📝 ${existingColumnIds.has(column.id.toString()) ? 'Updating' : 'Creating'} column:`, {
-            id: column.id.toString(),
-            title: column.title,
-            order: column.order
-          });
-
           if (existingColumnIds.has(column.id.toString())) {
             await tx.column.update({
               where: { id: column.id.toString() },
@@ -267,11 +255,38 @@ export class PrismaBoardRepository implements IBoardRepository {
             });
           }
 
-          // Save tasks for this column
-          for (const task of column.tasks) {
+          // Step 6: Get tasks for this column
+          const existingTasks = await tx.task.findMany({
+            where: { columnId: column.id.toString() },
+          });
+          const existingTaskIds = new Set(existingTasks.map((t) => t.id));
+          const columnTasks = column.tasks;
+
+          // Step 7: Delete tasks that are no longer in the column
+          const tasksToDelete = existingTasks.filter(
+            (t) => !columnTasks.some((bt) => bt.id.toString() === t.id)
+          );
+          for (const task of tasksToDelete) {
+            await tx.task.delete({ where: { id: task.id } });
+          }
+
+          // Step 8: Reset existing task orders to temporary values
+          const tempTaskOrderOffset = -10000;
+          const tasksToReset = existingTasks.filter((t) => existingTaskIds.has(t.id));
+          for (let i = 0; i < tasksToReset.length; i++) {
+            const task = tasksToReset[i];
+            await tx.task.update({
+              where: { id: task.id },
+              data: { order: tempTaskOrderOffset - i },
+            });
+          }
+
+          // Step 9: Create/update tasks with correct order
+          for (let taskIndex = 0; taskIndex < columnTasks.length; taskIndex++) {
+            const task = columnTasks[taskIndex];
             const { BugTask, FeatureTask } = await import('../../domain');
 
-            const taskData = {
+            const taskData: any = {
               id: task.id.toString(),
               title: task.title,
               description: task.description || null,
@@ -281,17 +296,23 @@ export class PrismaBoardRepository implements IBoardRepository {
               type: task.type.toUpperCase() as any,
               assigneeId: task.assigneeId?.toString() || null,
               columnId: column.id.toString(),
+              order: taskIndex,
               severity: task instanceof BugTask ? (task as any).severity : null,
               complexity: task instanceof FeatureTask ? (task as any).complexity : null,
               createdAt: task.createdAt,
               updatedAt: task.updatedAt,
             };
 
-            await tx.task.upsert({
-              where: { id: task.id.toString() },
-              update: taskData,
-              create: taskData,
-            });
+            if (existingTaskIds.has(task.id.toString())) {
+              await tx.task.update({
+                where: { id: task.id.toString() },
+                data: taskData,
+              });
+            } else {
+              await tx.task.create({
+                data: taskData,
+              });
+            }
           }
         }
       });
@@ -300,6 +321,218 @@ export class PrismaBoardRepository implements IBoardRepository {
       return ResultFactory.success(board);
     } catch (error) {
       console.error('  ❌ Transaction failed:', error);
+      if (error instanceof DomainException) {
+        return ResultFactory.failure(error);
+      }
+      throw PrismaErrorMapper.map(error);
+    }
+  }
+
+  // ============== NEW DEDICATED TASK PERSISTENCE METHODS ==============
+
+  async reorderTasks(
+    columnId: ColumnId,
+    orderedTaskIds: string[]
+  ): Promise<Result<void>> {
+    console.log('🔵 reorderTasks called');
+    console.log('  columnId:', columnId.toString());
+    console.log('  orderedTaskIds:', orderedTaskIds);
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        // Step 1: Get all tasks in the column
+        const existingTasks = await tx.task.findMany({
+          where: { columnId: columnId.toString() },
+        });
+
+        const existingTaskIds = new Set(existingTasks.map((t) => t.id));
+        const taskIdsSet = new Set(orderedTaskIds);
+
+        // Verify all orderedTaskIds exist in the column
+        for (const taskId of orderedTaskIds) {
+          if (!existingTaskIds.has(taskId)) {
+            throw new ValidationException(
+              `Task ${taskId} does not belong to column ${columnId.toString()}`
+            );
+          }
+        }
+
+        // Verify no extra tasks in the column (all tasks accounted for)
+        for (const task of existingTasks) {
+          if (!taskIdsSet.has(task.id)) {
+            throw new ValidationException(
+              `Task ${task.id} is missing from the reorder list`
+            );
+          }
+        }
+
+        // Step 2: Temporarily assign negative order values
+        const tempOrderOffset = -10000;
+        for (let i = 0; i < existingTasks.length; i++) {
+          const task = existingTasks[i];
+          await tx.task.update({
+            where: { id: task.id },
+            data: { order: tempOrderOffset - i },
+          });
+        }
+
+        // Step 3: Assign final order values based on array position
+        for (let i = 0; i < orderedTaskIds.length; i++) {
+          const taskId = orderedTaskIds[i];
+          await tx.task.update({
+            where: { id: taskId },
+            data: { order: i },
+          });
+        }
+      });
+
+      console.log('  ✅ reorderTasks completed successfully');
+      return ResultFactory.success(undefined);
+    } catch (error) {
+      console.error('  ❌ reorderTasks failed:', error);
+      if (error instanceof DomainException) {
+        return ResultFactory.failure(error);
+      }
+      throw PrismaErrorMapper.map(error);
+    }
+  }
+
+  async moveTask(
+    taskId: TaskId,
+    sourceColumnId: ColumnId,
+    targetColumnId: ColumnId,
+    targetOrder: number,
+    sourceTaskIds: string[],
+    targetTaskIds: string[]
+  ): Promise<Result<void>> {
+    console.log('🔵 moveTask called');
+    console.log('  taskId:', taskId.toString());
+    console.log('  sourceColumnId:', sourceColumnId.toString());
+    console.log('  targetColumnId:', targetColumnId.toString());
+    console.log('  targetOrder:', targetOrder);
+    console.log('  sourceTaskIds:', sourceTaskIds);
+    console.log('  targetTaskIds:', targetTaskIds);
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        // Step 1: Verify task exists and belongs to source column
+        const task = await tx.task.findUnique({
+          where: { id: taskId.toString() },
+        });
+
+        if (!task) {
+          throw new EntityNotFoundException('Task', taskId.toString());
+        }
+
+        if (task.columnId !== sourceColumnId.toString()) {
+          throw new ValidationException(
+            `Task ${taskId.toString()} does not belong to column ${sourceColumnId.toString()}`
+          );
+        }
+
+        // Step 2: Verify the moved task is NOT in sourceTaskIds
+        if (sourceTaskIds.includes(taskId.toString())) {
+          throw new ValidationException(
+            `Moved task ${taskId.toString()} should not be in sourceTaskIds`
+          );
+        }
+
+        // Step 3: Verify the moved task IS in targetTaskIds
+        if (!targetTaskIds.includes(taskId.toString())) {
+          throw new ValidationException(
+            `Moved task ${taskId.toString()} must be in targetTaskIds`
+          );
+        }
+
+        // Step 4: Get all tasks in source column (excluding the moved task)
+        const sourceExistingTasks = await tx.task.findMany({
+          where: {
+            columnId: sourceColumnId.toString(),
+            id: { not: taskId.toString() }
+          },
+        });
+
+        const sourceExistingIds = sourceExistingTasks.map(t => t.id);
+
+        // Verify all sourceTaskIds exist in source column (excluding moved task)
+        for (const id of sourceTaskIds) {
+          if (!sourceExistingIds.includes(id)) {
+            throw new ValidationException(`Task ${id} does not exist in source column`);
+          }
+        }
+
+        // Step 5: Temporarily assign safe negative order to moved task
+        await tx.task.update({
+          where: { id: taskId.toString() },
+          data: {
+            order: -99999,
+          },
+        });
+
+        // Step 6: Reindex source column (only the remaining tasks)
+        const tempSourceOffset = -20000;
+        for (let i = 0; i < sourceTaskIds.length; i++) {
+          await tx.task.update({
+            where: { id: sourceTaskIds[i] },
+            data: { order: tempSourceOffset - i },
+          });
+        }
+
+        // Assign final source orders
+        for (let i = 0; i < sourceTaskIds.length; i++) {
+          await tx.task.update({
+            where: { id: sourceTaskIds[i] },
+            data: { order: i },
+          });
+        }
+
+        // Step 7: Move task to destination column
+        await tx.task.update({
+          where: { id: taskId.toString() },
+          data: {
+            columnId: targetColumnId.toString(),
+            order: -99998,
+          },
+        });
+
+        // Step 8: Reindex destination column
+        // Get all tasks in destination column (including the moved task)
+        const destExistingTasks = await tx.task.findMany({
+          where: { columnId: targetColumnId.toString() },
+        });
+
+        const destExistingIds = destExistingTasks.map(t => t.id);
+
+        // Verify all targetTaskIds exist in destination column
+        // (including the moved task which was just moved)
+        for (const id of targetTaskIds) {
+          if (!destExistingIds.includes(id)) {
+            throw new ValidationException(`Task ${id} does not exist in destination column`);
+          }
+        }
+
+        // Temporarily assign negative orders to destination tasks
+        const tempDestOffset = -30000;
+        for (let i = 0; i < targetTaskIds.length; i++) {
+          await tx.task.update({
+            where: { id: targetTaskIds[i] },
+            data: { order: tempDestOffset - i },
+          });
+        }
+
+        // Assign final destination orders
+        for (let i = 0; i < targetTaskIds.length; i++) {
+          await tx.task.update({
+            where: { id: targetTaskIds[i] },
+            data: { order: i },
+          });
+        }
+      });
+
+      console.log('  ✅ moveTask completed successfully');
+      return ResultFactory.success(undefined);
+    } catch (error) {
+      console.error('  ❌ moveTask failed:', error);
       if (error instanceof DomainException) {
         return ResultFactory.failure(error);
       }
