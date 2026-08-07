@@ -195,32 +195,66 @@ export class PrismaBoardRepository implements IBoardRepository {
     }
   }
 
+  // In saveBoardWithColumns method, add logs:
+
   async saveBoardWithColumns(board: Board): Promise<Result<Board>> {
+    console.log('🔵 saveBoardWithColumns called');
+    console.log('  Board ID:', board.id.toString());
+    console.log('  Columns:', board.columns.map(c => ({
+      id: c.id.toString(),
+      title: c.title,
+      order: c.order,
+      taskCount: c.tasks.length
+    })));
+
     try {
       await prisma.$transaction(async (tx) => {
+        // Step 1: Save board
         const boardData = this.boardMapper.toPersistence(board);
+        console.log('  📝 Upserting board:', boardData);
         await tx.board.upsert({
           where: { id: board.id.toString() },
           update: boardData,
           create: boardData,
         });
 
+        // Step 2: Get existing columns
         const existingColumns = await tx.column.findMany({
           where: { boardId: board.id.toString() },
         });
+        console.log('  📋 Existing columns:', existingColumns.map(c => ({ id: c.id, order: c.order, title: c.title })));
 
         const existingColumnIds = new Set(existingColumns.map((c) => c.id));
         const boardColumns = board.columns;
 
+        // Step 3: Delete columns that are no longer in the board
         const columnsToDelete = existingColumns.filter(
           (c) => !boardColumns.some((bc) => bc.id.toString() === c.id)
         );
+        console.log('  🗑️ Columns to delete:', columnsToDelete.map(c => c.id));
         for (const col of columnsToDelete) {
           await tx.column.delete({ where: { id: col.id } });
         }
 
+        // Step 4: First, reset all column orders to avoid unique constraint conflicts
+        // Set all existing columns to a temporary negative order
+        const tempOrderOffset = -1000;
+        for (let i = 0; i < existingColumns.length; i++) {
+          const col = existingColumns[i];
+          await tx.column.update({
+            where: { id: col.id },
+            data: { order: tempOrderOffset - i },
+          });
+        }
+
+        // Step 5: Now update/create columns with the correct order
         for (const column of boardColumns) {
           const columnData = this.columnMapper.toPersistence(column);
+          console.log(`  📝 ${existingColumnIds.has(column.id.toString()) ? 'Updating' : 'Creating'} column:`, {
+            id: column.id.toString(),
+            title: column.title,
+            order: column.order
+          });
 
           if (existingColumnIds.has(column.id.toString())) {
             await tx.column.update({
@@ -233,6 +267,7 @@ export class PrismaBoardRepository implements IBoardRepository {
             });
           }
 
+          // Save tasks for this column
           for (const task of column.tasks) {
             const { BugTask, FeatureTask } = await import('../../domain');
 
@@ -261,8 +296,10 @@ export class PrismaBoardRepository implements IBoardRepository {
         }
       });
 
+      console.log('  ✅ Transaction completed successfully');
       return ResultFactory.success(board);
     } catch (error) {
+      console.error('  ❌ Transaction failed:', error);
       if (error instanceof DomainException) {
         return ResultFactory.failure(error);
       }

@@ -7,6 +7,7 @@ import { PrismaTaskRepository } from '@/core/infrastructure/repositories/PrismaT
 import { PrismaColumnRepository } from '@/core/infrastructure/repositories/PrismaColumnRepository';
 import { PrismaBoardRepository } from '@/core/infrastructure/repositories/PrismaBoardRepository';
 import { ROUTES } from '@/config/routes';
+import { ResultFactory, ValidationException, TaskId, ColumnId } from '@/core/domain';
 
 export type ActionResult<T> =
     | {
@@ -46,10 +47,23 @@ const createTaskSchema = z.object({
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 
-/**
- * Server Action for creating a new task
- * Validates input, calls application service, and returns plain JSON
- */
+const reorderTaskSchema = z.object({
+    columnId: z.string().min(1, 'Column ID is required'),
+    taskId: z.string().min(1, 'Task ID is required'),
+    newOrder: z.number().min(0, 'Order must be a positive number'),
+});
+
+export type ReorderTaskInput = z.infer<typeof reorderTaskSchema>;
+
+const moveTaskSchema = z.object({
+    taskId: z.string().min(1, 'Task ID is required'),
+    fromColumnId: z.string().min(1, 'Source column ID is required'),
+    toColumnId: z.string().min(1, 'Destination column ID is required'),
+    newOrder: z.number().optional(),
+});
+
+export type MoveTaskInput = z.infer<typeof moveTaskSchema>;
+
 export async function createTaskAction(input: CreateTaskInput): Promise<ActionResult<TaskDTO>> {
     try {
         const validationResult = createTaskSchema.safeParse(input);
@@ -63,13 +77,11 @@ export async function createTaskAction(input: CreateTaskInput): Promise<ActionRe
 
         const { title, description, priority, estimate, estimateUnit, columnId } = validationResult.data;
 
-        // Instantiate repositories and service
         const taskRepository = new PrismaTaskRepository();
         const columnRepository = new PrismaColumnRepository();
         const boardRepository = new PrismaBoardRepository();
         const taskService = new TaskApplicationService(taskRepository, columnRepository, boardRepository);
 
-        // Create task using application service
         const result = await taskService.createTask({
             title,
             description: description || '',
@@ -115,6 +127,127 @@ export async function createTaskAction(input: CreateTaskInput): Promise<ActionRe
         return {
             success: false,
             message: 'An unexpected error occurred while creating the task',
+        };
+    }
+}
+
+/**
+ * Server Action for reordering tasks within the same column
+ */
+export async function reorderTaskAction(input: ReorderTaskInput): Promise<ActionResult<void>> {
+    try {
+        const validationResult = reorderTaskSchema.safeParse(input);
+        if (!validationResult.success) {
+            const firstError = validationResult.error.issues[0];
+            return {
+                success: false,
+                message: firstError.message,
+            };
+        }
+
+        const { columnId, taskId, newOrder } = validationResult.data;
+
+        const boardRepository = new PrismaBoardRepository();
+
+        const boardResult = await boardRepository.findBoardByColumnId(new ColumnId(columnId));
+        if (!boardResult.isSuccess()) {
+            return {
+                success: false,
+                message: boardResult.error.message,
+            };
+        }
+
+        const board = boardResult.value;
+        board.reorderTaskInColumn(new ColumnId(columnId), new TaskId(taskId), newOrder);
+
+        const saveResult = await boardRepository.saveBoardWithColumns(board);
+        if (!saveResult.isSuccess()) {
+            return {
+                success: false,
+                message: saveResult.error.message,
+            };
+        }
+
+        revalidatePath(`/boards/${board.id}`);
+
+        return {
+            success: true,
+            data: undefined,
+        };
+    } catch (error) {
+        console.error('Reorder task action error:', error);
+        if (error instanceof ValidationException) {
+            return {
+                success: false,
+                message: error.message,
+            };
+        }
+        return {
+            success: false,
+            message: 'An unexpected error occurred while reordering tasks',
+        };
+    }
+}
+
+/**
+ * Server Action for moving a task to another column
+ */
+export async function moveTaskAction(input: MoveTaskInput): Promise<ActionResult<void>> {
+    try {
+        const validationResult = moveTaskSchema.safeParse(input);
+        if (!validationResult.success) {
+            const firstError = validationResult.error.issues[0];
+            return {
+                success: false,
+                message: firstError.message,
+            };
+        }
+
+        const { taskId, fromColumnId, toColumnId, newOrder } = validationResult.data;
+
+        const boardRepository = new PrismaBoardRepository();
+
+        const boardResult = await boardRepository.findBoardByColumnId(new ColumnId(fromColumnId));
+        if (!boardResult.isSuccess()) {
+            return {
+                success: false,
+                message: boardResult.error.message,
+            };
+        }
+
+        const board = boardResult.value;
+        board.moveTask(
+            new TaskId(taskId),
+            new ColumnId(fromColumnId),
+            new ColumnId(toColumnId),
+            newOrder
+        );
+
+        const saveResult = await boardRepository.saveBoardWithColumns(board);
+        if (!saveResult.isSuccess()) {
+            return {
+                success: false,
+                message: saveResult.error.message,
+            };
+        }
+
+        revalidatePath(`/boards/${board.id}`);
+
+        return {
+            success: true,
+            data: undefined,
+        };
+    } catch (error) {
+        console.error('Move task action error:', error);
+        if (error instanceof ValidationException) {
+            return {
+                success: false,
+                message: error.message,
+            };
+        }
+        return {
+            success: false,
+            message: 'An unexpected error occurred while moving the task',
         };
     }
 }
