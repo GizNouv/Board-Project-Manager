@@ -77,6 +77,7 @@ model Task {
   type        TaskType
   assigneeId  String?  @map("assignee_id")
   columnId    String   @map("column_id")
+  order       Int      @default(0)
   severity    String?
   complexity  String?
   createdAt   DateTime @default(now()) @map("created_at")
@@ -88,7 +89,7 @@ model Task {
   attachments Attachment[]
 
   @@map("tasks")
-  @@index([columnId])
+  @@index([columnId, order])
   @@index([assigneeId])
   @@index([priority])
   @@index([type])
