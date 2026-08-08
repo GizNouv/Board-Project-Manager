@@ -14,22 +14,13 @@ interface ColumnViewProps {
     column: ColumnData;
     className?: string;
     onTaskCreated?: (task: TaskData) => void;
+    onTaskUpdated?: (task: TaskData) => void;
 }
 
-export function ColumnView({ column, className, onTaskCreated }: ColumnViewProps) {
+export function ColumnView({ column, className, onTaskCreated, onTaskUpdated }: ColumnViewProps) {
     const tasks = column.tasks;
     const taskCount = tasks.length;
 
-    // DEBUG: ColumnView render log
-    console.log('[ColumnView] render:', {
-        columnId: column.id,
-        columnTitle: column.title,
-        taskCount: tasks.length,
-        taskIds: tasks.map(task => task.id),
-        hasOnTaskCreated: typeof onTaskCreated === 'function',
-    });
-
-    // Log when column renders and its tasks
     useEffect(() => {
         console.log(`📋 ColumnView render: ${column.id} - ${column.title}`);
         console.log(`   tasks:`, tasks.map(t => ({ id: t.id, title: t.title })));
@@ -92,7 +83,12 @@ export function ColumnView({ column, className, onTaskCreated }: ColumnViewProps
                     <>
                         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
                             {tasks.slice(0, 5).map((task) => (
-                                <SortableTask key={task.id} task={task} columnId={column.id} />
+                                <SortableTask
+                                    key={task.id}
+                                    task={task}
+                                    columnId={column.id}
+                                    onTaskUpdated={onTaskUpdated}  // Pass to each task
+                                />
                             ))}
                         </SortableContext>
                         <CreateTaskDialog

@@ -9,9 +9,10 @@ import { useEffect } from 'react';
 interface SortableTaskProps {
     task: TaskData;
     columnId: string;
+    onTaskUpdated?: (task: TaskData) => void;
 }
 
-export function SortableTask({ task, columnId }: SortableTaskProps) {
+export function SortableTask({ task, columnId, onTaskUpdated }: SortableTaskProps) {
     const sortableId = `${columnId}-task-${task.id}`;
 
     // Log when SortableTask renders
@@ -49,7 +50,7 @@ export function SortableTask({ task, columnId }: SortableTaskProps) {
             {...attributes}
             {...listeners}
         >
-            <TaskCard task={task} />
+            <TaskCard task={task} onTaskUpdated={onTaskUpdated} />
         </div>
     );
 }

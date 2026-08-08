@@ -10,9 +10,10 @@ import { useEffect } from 'react';
 interface SortableColumnProps {
   column: ColumnData;
   onTaskCreated?: (task: TaskData) => void;
+  onTaskUpdated?: (task: TaskData) => void;
 }
 
-export function SortableColumn({ column, onTaskCreated }: SortableColumnProps) {
+export function SortableColumn({ column, onTaskCreated, onTaskUpdated }: SortableColumnProps) {
   const {
     attributes,
     listeners,
@@ -34,16 +35,6 @@ export function SortableColumn({ column, onTaskCreated }: SortableColumnProps) {
     opacity: isDragging ? 0.4 : 1,
   };
 
-  // DEBUG: SortableColumn render log
-  console.log('[SortableColumn] render:', {
-    columnId: column.id,
-    columnTitle: column.title,
-    taskCount: column.tasks.length,
-    taskIds: column.tasks.map(task => task.id),
-    hasOnTaskCreated: typeof onTaskCreated === 'function',
-  });
-
-  // Log when SortableColumn renders with drag state
   useEffect(() => {
     console.log(`📋 SortableColumn ${column.id} (${column.title}) rendered, isDragging:`, isDragging);
   }, [isDragging, column.id, column.title]);
@@ -94,8 +85,11 @@ export function SortableColumn({ column, onTaskCreated }: SortableColumnProps) {
         >
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
-        {/* ✅ Pass onTaskCreated down to ColumnView */}
-        <ColumnView column={column} onTaskCreated={onTaskCreated} />
+        <ColumnView
+          column={column}
+          onTaskCreated={onTaskCreated}
+          onTaskUpdated={onTaskUpdated}
+        />
       </div>
     </div>
   );

@@ -18,10 +18,10 @@ import {
   horizontalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
-import { SortableColumn } from './SortableColumn';
 import { ColumnData, TaskData } from '@/types/kanban';
 import { reorderColumnsAction } from '@/app/actions/board';
 import { reorderTasksAction, moveTaskAction } from '@/app/actions/task';
+import { SortableColumn } from './SortableColumn';
 
 interface BoardViewProps {
   board: {
@@ -39,15 +39,6 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
   const updateCounterRef = useRef(0);
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
   const boardId = initialBoard.id;
-
-  // DEBUG: BoardView render log
-  console.log('========== BOARDVIEW RENDER ==========');
-  console.log('[BoardView] columns:', columns.map(c => ({
-    id: c.id,
-    title: c.title,
-    taskCount: c.tasks.length,
-    taskIds: c.tasks.map(t => t.id),
-  })));
 
   // Log initial state
   useEffect(() => {
@@ -106,32 +97,12 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
 
   // ========== HANDLE TASK CREATED CALLBACK ==========
   const handleTaskCreated = useCallback((newTask: TaskData) => {
-    console.log('========== BOARD TASK CREATED ==========');
-    console.log('[BoardView] handleTaskCreated CALLED');
-    console.log('[BoardView] received task:', newTask);
-    console.log('[BoardView] received task JSON:', JSON.stringify(newTask, null, 2));
-    console.log('[BoardView] received task.id:', newTask?.id);
-    console.log('[BoardView] received task.columnId:', newTask?.columnId);
-    console.log('[BoardView] current columns BEFORE update:', columns.map(c => ({
-      id: c.id,
-      title: c.title,
-      taskCount: c.tasks.length,
-      taskIds: c.tasks.map(t => t.id),
-    })));
+    console.log('[BoardView] Task created, updating state:', newTask);
 
     setColumns(prevColumns => {
-      console.log('========== BOARD STATE UPDATE ==========');
-      console.log('[BoardView] prevColumns:', prevColumns.map(c => ({
-        id: c.id,
-        title: c.title,
-        taskCount: c.tasks.length,
-        taskIds: c.tasks.map(t => t.id),
-      })));
-
-      const updatedColumns = prevColumns.map(column => {
+      return prevColumns.map(column => {
         if (column.id === newTask.columnId) {
           if (column.tasks.some(task => task.id === newTask.id)) {
-            console.log('[BoardView] Task already exists, skipping');
             return column;
           }
           return {
@@ -141,21 +112,32 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
         }
         return column;
       });
-
-      console.log('[BoardView] updatedColumns:', updatedColumns.map(c => ({
-        id: c.id,
-        title: c.title,
-        taskCount: c.tasks.length,
-        taskIds: c.tasks.map(t => t.id),
-      })));
-
-      console.log('[BoardView] NEW TASK FOUND IN UPDATED STATE:', updatedColumns.some(column =>
-        column.tasks.some(task => task.id === newTask.id)
-      ));
-
-      return updatedColumns;
     });
-  }, [columns]);
+  }, []);
+
+  // ========== HANDLE TASK UPDATED CALLBACK ==========
+  const handleTaskUpdated = useCallback((updatedTask: TaskData) => {
+    console.log('[BoardView] Task updated, updating state:', updatedTask);
+
+    setColumns(prevColumns => {
+      return prevColumns.map(column => {
+        // Check if this column contains the task
+        const taskIndex = column.tasks.findIndex(t => t.id === updatedTask.id);
+        if (taskIndex === -1) {
+          return column;
+        }
+
+        // Replace the task with updated version
+        const updatedTasks = [...column.tasks];
+        updatedTasks[taskIndex] = updatedTask;
+
+        return {
+          ...column,
+          tasks: updatedTasks,
+        };
+      });
+    });
+  }, []);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -694,6 +676,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
                 key={column.id}
                 column={column}
                 onTaskCreated={handleTaskCreated}
+                onTaskUpdated={handleTaskUpdated}
               />
             ))}
           </div>

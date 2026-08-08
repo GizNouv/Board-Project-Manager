@@ -48,6 +48,29 @@ const createTaskSchema = z.object({
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 
+// ============== UPDATE TASK SCHEMA ==============
+
+const updateTaskSchema = z.object({
+    taskId: z.string().min(1, 'Task ID is required'),
+    columnId: z.string().min(1, 'Column ID is required'),
+    title: z.string()
+        .min(1, 'Task title is required')
+        .max(200, 'Task title must not exceed 200 characters')
+        .trim()
+        .optional(),
+    description: z.string().optional(),
+    priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
+    estimate: z.object({
+        value: z.number().min(0, 'Estimate must be a positive number'),
+        unit: z.enum(['hours', 'days']).optional(),
+    }).optional(),
+    severity: z.enum(['minor', 'major', 'critical']).optional(),
+    complexity: z.enum(['low', 'medium', 'high']).optional(),
+    assigneeId: z.string().nullable().optional(),
+});
+
+export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
+
 // ============== REORDER TASKS SCHEMA ==============
 
 const reorderTasksSchema = z.object({
@@ -64,7 +87,7 @@ const moveTaskSchema = z.object({
     sourceColumnId: z.string().min(1, 'Source column ID is required'),
     targetColumnId: z.string().min(1, 'Target column ID is required'),
     targetOrder: z.number().min(0, 'Target order must be positive'),
-    sourceTaskIds: z.array(z.string()), // Empty array is allowed (source column becomes empty)
+    sourceTaskIds: z.array(z.string()),
     targetTaskIds: z.array(z.string()).min(1, 'Target task IDs are required'),
 });
 
@@ -135,6 +158,94 @@ export async function createTaskAction(input: CreateTaskInput): Promise<ActionRe
         return {
             success: false,
             message: 'An unexpected error occurred while creating the task',
+        };
+    }
+}
+
+// ============== UPDATE TASK ACTION ==============
+
+export async function updateTaskAction(input: UpdateTaskInput): Promise<ActionResult<TaskDTO>> {
+    console.log('🔵 updateTaskAction called');
+    console.log('  input:', input);
+
+    try {
+        const validationResult = updateTaskSchema.safeParse(input);
+        if (!validationResult.success) {
+            const firstError = validationResult.error.issues[0];
+            return {
+                success: false,
+                message: firstError.message,
+            };
+        }
+
+        const {
+            taskId,
+            columnId,
+            title,
+            description,
+            priority,
+            estimate,
+            severity,
+            complexity,
+            assigneeId
+        } = validationResult.data;
+
+        const taskRepository = new PrismaTaskRepository();
+        const columnRepository = new PrismaColumnRepository();
+        const boardRepository = new PrismaBoardRepository();
+        const taskService = new TaskApplicationService(taskRepository, columnRepository, boardRepository);
+
+        // Build update DTO
+        const updateDto: any = {};
+
+        if (title !== undefined) updateDto.title = title;
+        if (description !== undefined) updateDto.description = description;
+        if (priority !== undefined) updateDto.priority = priority;
+        if (estimate !== undefined) {
+            updateDto.estimate = {
+                value: estimate.value,
+                unit: estimate.unit || 'hours',
+            };
+        }
+        if (severity !== undefined) updateDto.severity = severity;
+        if (complexity !== undefined) updateDto.complexity = complexity;
+        if (assigneeId !== undefined) updateDto.assigneeId = assigneeId;
+
+        const result = await taskService.updateTask(taskId, updateDto);
+
+        if (!result.isSuccess()) {
+            return {
+                success: false,
+                message: result.error.message,
+            };
+        }
+
+        const task = result.value;
+        const taskDTO: TaskDTO = {
+            id: task.id.toString(),
+            title: task.title,
+            description: task.description,
+            priority: task.priority.value,
+            estimate: task.estimate.value,
+            estimateUnit: task.estimate.unit,
+            type: task.type,
+            assigneeId: task.assigneeId?.toString() || null,
+            columnId: columnId,
+            createdAt: task.createdAt.toISOString(),
+            updatedAt: task.updatedAt.toISOString(),
+        };
+
+        revalidatePath(`/boards/${columnId}`);
+
+        return {
+            success: true,
+            data: taskDTO,
+        };
+    } catch (error) {
+        console.error('❌ updateTaskAction error:', error);
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : 'An unexpected error occurred while updating the task',
         };
     }
 }
