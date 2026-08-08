@@ -58,6 +58,18 @@ const updateColumnSchema = z.object({
 
 export type UpdateColumnInput = z.infer<typeof updateColumnSchema>;
 
+// ============== UPDATE BOARD SCHEMA ==============
+
+const updateBoardSchema = z.object({
+  boardId: z.string().min(1, 'Board ID is required'),
+  title: z.string()
+    .min(1, 'Board title is required')
+    .max(100, 'Board title must not exceed 100 characters')
+    .trim(),
+});
+
+export type UpdateBoardInput = z.infer<typeof updateBoardSchema>;
+
 // ============== CREATE BOARD ==============
 
 export async function createBoardAction(input: CreateBoardInput): Promise<ActionResult<BoardDTO>> {
@@ -228,6 +240,61 @@ export async function updateColumnAction(input: UpdateColumnInput): Promise<Acti
     return {
       success: false,
       message: error instanceof Error ? error.message : 'An unexpected error occurred while updating the column',
+    };
+  }
+}
+
+// ============== UPDATE BOARD ==============
+
+export async function updateBoardAction(input: UpdateBoardInput): Promise<ActionResult<BoardDTO>> {
+  console.log('🔵 updateBoardAction called');
+  console.log('  input:', input);
+
+  try {
+    const validationResult = updateBoardSchema.safeParse(input);
+    if (!validationResult.success) {
+      const firstError = validationResult.error.issues[0];
+      return {
+        success: false,
+        message: firstError.message,
+      };
+    }
+
+    const { boardId, title } = validationResult.data;
+
+    const boardRepository = new PrismaBoardRepository();
+    const columnRepository = new PrismaColumnRepository();
+    const boardService = new BoardApplicationService(boardRepository, columnRepository);
+
+    const result = await boardService.updateBoard(boardId, { title });
+
+    if (!result.isSuccess()) {
+      return {
+        success: false,
+        message: result.error.message,
+      };
+    }
+
+    const board = result.value;
+    const boardDTO: BoardDTO = {
+      id: board.id.toString(),
+      title: board.title,
+      ownerId: board.ownerId.toString(),
+      createdAt: board.createdAt.toISOString(),
+      updatedAt: board.updatedAt.toISOString(),
+    };
+
+    revalidatePath(`/boards/${boardId}`);
+
+    return {
+      success: true,
+      data: boardDTO,
+    };
+  } catch (error) {
+    console.error('❌ updateBoardAction error:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'An unexpected error occurred while updating the board',
     };
   }
 }

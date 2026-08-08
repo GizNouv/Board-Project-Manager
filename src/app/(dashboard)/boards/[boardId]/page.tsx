@@ -2,10 +2,9 @@ import { requireUser } from '@/lib/session';
 import { BoardApplicationService } from '@/core/application/services/BoardApplicationService';
 import { PrismaBoardRepository } from '@/core/infrastructure/repositories/PrismaBoardRepository';
 import { PrismaColumnRepository } from '@/core/infrastructure/repositories/PrismaColumnRepository';
-import { BoardHeader } from '@/components/board/BoardHeader';
-import { ColumnList } from '@/components/board/ColumnList';
-import { EmptyColumnState } from '@/components/board/EmptyColumnState';
 import { notFound } from 'next/navigation';
+import { BoardData } from '@/types/kanban';
+import { BoardClient } from './BoardClient';
 
 interface BoardPageProps {
     params: Promise<{
@@ -29,13 +28,11 @@ export default async function BoardPage({ params }: BoardPageProps) {
 
     const board = boardResult.value;
 
-    // Verify the board belongs to the current user
     if (board.ownerId.toString() !== user.id) {
         notFound();
     }
 
-    // Convert Domain Entities to plain DTOs
-    const boardDTO = {
+    const boardDTO: BoardData = {
         id: board.id.toString(),
         title: board.title,
         columns: board.columns.map((column) => ({
@@ -47,7 +44,7 @@ export default async function BoardPage({ params }: BoardPageProps) {
                 id: task.id.toString(),
                 title: task.title,
                 description: task.description,
-                columnId: column.id.toString(), // Add this
+                columnId: column.id.toString(),
                 estimate: {
                     value: task.estimate.value,
                     unit: task.estimate.unit,
@@ -61,24 +58,5 @@ export default async function BoardPage({ params }: BoardPageProps) {
         })),
     };
 
-    const columnDTOs = board.columns.map((column) => ({
-        id: column.id.toString(),
-        title: column.title,
-        taskCount: column.taskCount,
-        order: column.order,
-    }));
-
-    const hasColumns = columnDTOs.length > 0;
-
-    return (
-        <div className="space-y-6">
-            <BoardHeader title={boardDTO.title} boardId={boardId} />
-
-            {hasColumns ? (
-                <ColumnList columns={columnDTOs} className="w-full" />
-            ) : (
-                <EmptyColumnState boardId={boardId} />
-            )}
-        </div>
-    );
+    return <BoardClient board={boardDTO} boardId={boardId} />;
 }
