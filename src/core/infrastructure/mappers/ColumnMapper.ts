@@ -26,7 +26,8 @@ export class ColumnMapper implements Mapper<Column, PrismaColumnWithTasks> {
     if (prismaColumn.tasks && prismaColumn.tasks.length > 0) {
       for (const prismaTask of prismaColumn.tasks) {
         const task = this.taskMapper.toDomain(prismaTask);
-        column.addTask(task);
+        // Skip validation when loading from database
+        column.addTask(task, true);
       }
     }
 

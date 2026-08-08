@@ -81,6 +81,7 @@ export class TaskMapper implements Mapper<BaseTask, PrismaTaskWithRelations> {
       priority: task.priority.value as PrismaPriority,
       type: task.type.toUpperCase() as PrismaTaskType,
       assigneeId: task.assigneeId?.toString() || null,
+      order: 0,
       columnId: '', // Must be set by repository
       severity: null as string | null,
       complexity: null as string | null,
@@ -118,6 +119,7 @@ export class TaskMapper implements Mapper<BaseTask, PrismaTaskWithRelations> {
       priority: task.priority.value as PrismaPriority,
       type: task.type.toUpperCase() as PrismaTaskType,
       assigneeId: task.assigneeId?.toString() || null,
+      order: 0,
       severity: null as string | null,
       complexity: null as string | null,
       updatedAt: new Date(),
