@@ -18,10 +18,10 @@ import {
   horizontalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
+import { SortableColumn } from './SortableColumn';
 import { ColumnData, TaskData } from '@/types/kanban';
 import { reorderColumnsAction } from '@/app/actions/board';
 import { reorderTasksAction, moveTaskAction } from '@/app/actions/task';
-import { SortableColumn } from './SortableColumn';
 
 interface BoardViewProps {
   board: {
@@ -130,11 +130,27 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
         // Replace the task with updated version
         const updatedTasks = [...column.tasks];
         updatedTasks[taskIndex] = updatedTask;
-
         return {
           ...column,
           tasks: updatedTasks,
         };
+      });
+    });
+  }, []);
+
+  // ========== HANDLE COLUMN UPDATED CALLBACK ==========
+  const handleColumnUpdated = useCallback((updatedColumn: ColumnData) => {
+    console.log('[BoardView] Column updated, updating state:', updatedColumn);
+
+    setColumns(prevColumns => {
+      return prevColumns.map(column => {
+        if (column.id === updatedColumn.id) {
+          return {
+            ...column,
+            title: updatedColumn.title,
+          };
+        }
+        return column;
       });
     });
   }, []);
@@ -675,8 +691,10 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
               <SortableColumn
                 key={column.id}
                 column={column}
+                boardId={boardId}
                 onTaskCreated={handleTaskCreated}
                 onTaskUpdated={handleTaskUpdated}
+                onColumnUpdated={handleColumnUpdated}
               />
             ))}
           </div>

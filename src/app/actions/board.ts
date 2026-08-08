@@ -7,16 +7,17 @@ import { PrismaBoardRepository } from '@/core/infrastructure/repositories/Prisma
 import { PrismaColumnRepository } from '@/core/infrastructure/repositories/PrismaColumnRepository';
 import { ROUTES } from '@/config/routes';
 import { BoardId, ColumnId, ResultFactory, ValidationException } from '@/core/domain';
+import { ColumnDTO } from '@/core/application/dto/BoardDTOs';
 
 export type ActionResult<T> =
   | {
-      success: true;
-      data: T;
-    }
+    success: true;
+    data: T;
+  }
   | {
-      success: false;
-      message: string;
-    };
+    success: false;
+    message: string;
+  };
 
 export interface BoardDTO {
   id: string;
@@ -43,6 +44,21 @@ const reorderColumnsSchema = z.object({
 });
 
 export type ReorderColumnsInput = z.infer<typeof reorderColumnsSchema>;
+
+// ============== UPDATE COLUMN SCHEMA ==============
+
+const updateColumnSchema = z.object({
+  columnId: z.string().min(1, 'Column ID is required'),
+  boardId: z.string().min(1, 'Board ID is required'),
+  title: z.string()
+    .min(1, 'Column title is required')
+    .max(100, 'Column title must not exceed 100 characters')
+    .trim(),
+});
+
+export type UpdateColumnInput = z.infer<typeof updateColumnSchema>;
+
+// ============== CREATE BOARD ==============
 
 export async function createBoardAction(input: CreateBoardInput): Promise<ActionResult<BoardDTO>> {
   try {
@@ -97,6 +113,8 @@ export async function createBoardAction(input: CreateBoardInput): Promise<Action
   }
 }
 
+// ============== REORDER COLUMNS ==============
+
 export async function reorderColumnsAction(input: ReorderColumnsInput): Promise<ActionResult<void>> {
   console.log('🔵 reorderColumnsAction called');
   console.log('  input:', input);
@@ -105,7 +123,6 @@ export async function reorderColumnsAction(input: ReorderColumnsInput): Promise<
     const validationResult = reorderColumnsSchema.safeParse(input);
     if (!validationResult.success) {
       const firstError = validationResult.error.issues[0];
-      console.log('  ❌ Validation failed:', firstError.message);
       return {
         success: false,
         message: firstError.message,
@@ -114,19 +131,12 @@ export async function reorderColumnsAction(input: ReorderColumnsInput): Promise<
 
     const { boardId, columnId, newOrder } = validationResult.data;
 
-    console.log('  ✅ Validation passed');
-    console.log('  boardId:', boardId);
-    console.log('  columnId:', columnId);
-    console.log('  newOrder:', newOrder);
-
     const boardRepository = new PrismaBoardRepository();
-    console.log('  📦 BoardRepository created');
+    const columnRepository = new PrismaColumnRepository();
+    const boardService = new BoardApplicationService(boardRepository, columnRepository);
 
-    const boardResult = await boardRepository.findBoardWithColumns(new BoardId(boardId));
-    console.log('  📦 Board loaded:', boardResult.isSuccess());
-
+    const boardResult = await boardService.getBoardWithColumns(boardId);
     if (!boardResult.isSuccess()) {
-      console.log('  ❌ Board not found');
       return {
         success: false,
         message: boardResult.error.message,
@@ -134,29 +144,15 @@ export async function reorderColumnsAction(input: ReorderColumnsInput): Promise<
     }
 
     const board = boardResult.value;
-    console.log('  📊 Board before reorder:');
-    console.log('    columns:', board.columns.map(c => ({ id: c.id.toString(), title: c.title, order: c.order })));
-
-    // Use the aggregate root method to reorder columns
     board.reorderColumn(new ColumnId(columnId), newOrder);
 
-    console.log('  📊 Board after reorder:');
-    console.log('    columns:', board.columns.map(c => ({ id: c.id.toString(), title: c.title, order: c.order })));
-
-    // Save the entire board aggregate
-    console.log('  💾 Saving board...');
     const saveResult = await boardRepository.saveBoardWithColumns(board);
-    console.log('  💾 Save result:', saveResult.isSuccess());
-
     if (!saveResult.isSuccess()) {
-      console.log('  ❌ Save failed:', saveResult.error.message);
       return {
         success: false,
         message: saveResult.error.message,
       };
     }
-
-    console.log('  ✅ Board saved successfully');
 
     revalidatePath(`/boards/${boardId}`);
 
@@ -165,12 +161,7 @@ export async function reorderColumnsAction(input: ReorderColumnsInput): Promise<
       data: undefined,
     };
   } catch (error) {
-    // Log the FULL error details
-    console.error('❌ reorderColumnsAction ERROR DETAILS:');
-    console.error('  error:', error);
-    console.error('  error message:', error instanceof Error ? error.message : 'Unknown error');
-    console.error('  error stack:', error instanceof Error ? error.stack : 'No stack');
-    
+    console.error('Reorder columns action error:', error);
     if (error instanceof ValidationException) {
       return {
         success: false,
@@ -179,7 +170,64 @@ export async function reorderColumnsAction(input: ReorderColumnsInput): Promise<
     }
     return {
       success: false,
-      message: `An unexpected error occurred while reordering columns: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message: 'An unexpected error occurred while reordering columns',
+    };
+  }
+}
+
+// ============== UPDATE COLUMN ==============
+
+export async function updateColumnAction(input: UpdateColumnInput): Promise<ActionResult<ColumnDTO>> {
+  console.log('🔵 updateColumnAction called');
+  console.log('  input:', input);
+
+  try {
+    const validationResult = updateColumnSchema.safeParse(input);
+    if (!validationResult.success) {
+      const firstError = validationResult.error.issues[0];
+      return {
+        success: false,
+        message: firstError.message,
+      };
+    }
+
+    const { columnId, boardId, title } = validationResult.data;
+
+    const boardRepository = new PrismaBoardRepository();
+    const columnRepository = new PrismaColumnRepository();
+    const boardService = new BoardApplicationService(boardRepository, columnRepository);
+
+    // Update the column using the application service
+    const result = await boardService.updateColumn(columnId, { title });
+
+    if (!result.isSuccess()) {
+      return {
+        success: false,
+        message: result.error.message,
+      };
+    }
+
+    const column = result.value;
+    const columnDTO: ColumnDTO = {
+      id: column.id.toString(),
+      boardId: column.boardId,
+      title: column.title,
+      order: column.order,
+      createdAt: column.createdAt.toISOString(),
+      updatedAt: column.updatedAt.toISOString(),
+    };
+
+    revalidatePath(`/boards/${boardId}`);
+
+    return {
+      success: true,
+      data: columnDTO,
+    };
+  } catch (error) {
+    console.error('❌ updateColumnAction error:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'An unexpected error occurred while updating the column',
     };
   }
 }

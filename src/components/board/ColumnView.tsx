@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableTask } from './SortableTask';
 import { CreateTaskDialog } from '@/components/task/CreateTaskDialog';
+import { EditColumnDialog } from '@/components/column/EditColumnDialog';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { ColumnData, TaskData } from '@/types/kanban';
@@ -12,12 +13,21 @@ import { useEffect } from 'react';
 
 interface ColumnViewProps {
     column: ColumnData;
+    boardId: string;
     className?: string;
     onTaskCreated?: (task: TaskData) => void;
     onTaskUpdated?: (task: TaskData) => void;
+    onColumnUpdated?: (column: ColumnData) => void;
 }
 
-export function ColumnView({ column, className, onTaskCreated, onTaskUpdated }: ColumnViewProps) {
+export function ColumnView({
+    column,
+    boardId,
+    className,
+    onTaskCreated,
+    onTaskUpdated,
+    onColumnUpdated
+}: ColumnViewProps) {
     const tasks = column.tasks;
     const taskCount = tasks.length;
 
@@ -56,9 +66,29 @@ export function ColumnView({ column, className, onTaskCreated, onTaskUpdated }: 
         >
             <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-medium">
-                        {column.title}
-                    </CardTitle>
+                    <div className="flex items-center gap-2 min-w-0">
+                        <CardTitle className="text-sm font-medium truncate">
+                            {column.title}
+                        </CardTitle>
+                        {/* Edit button - isolated from drag */}
+                        <EditColumnDialog
+                            column={column}
+                            boardId={boardId}
+                            onColumnUpdated={onColumnUpdated}
+                            trigger={
+                                <button
+                                    className="h-5 w-5 shrink-0 rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                                    aria-label="Edit column"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                        <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                    </svg>
+                                </button>
+                            }
+                        />
+                    </div>
                     <CardDescription>
                         {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
                     </CardDescription>
@@ -87,7 +117,7 @@ export function ColumnView({ column, className, onTaskCreated, onTaskUpdated }: 
                                     key={task.id}
                                     task={task}
                                     columnId={column.id}
-                                    onTaskUpdated={onTaskUpdated}  // Pass to each task
+                                    onTaskUpdated={onTaskUpdated}
                                 />
                             ))}
                         </SortableContext>

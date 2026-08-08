@@ -27,3 +27,12 @@ export interface BoardResponseDTO {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface ColumnDTO {
+  id: string;
+  boardId: string;
+  title: string;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -9,11 +9,19 @@ import { useEffect } from 'react';
 
 interface SortableColumnProps {
   column: ColumnData;
+  boardId: string;
   onTaskCreated?: (task: TaskData) => void;
   onTaskUpdated?: (task: TaskData) => void;
+  onColumnUpdated?: (column: ColumnData) => void;
 }
 
-export function SortableColumn({ column, onTaskCreated, onTaskUpdated }: SortableColumnProps) {
+export function SortableColumn({
+  column,
+  boardId,
+  onTaskCreated,
+  onTaskUpdated,
+  onColumnUpdated
+}: SortableColumnProps) {
   const {
     attributes,
     listeners,
@@ -56,7 +64,6 @@ export function SortableColumn({ column, onTaskCreated, onTaskUpdated }: Sortabl
       target.closest('[role="dialog"]') !== null ||
       target.closest('[contenteditable="true"]') !== null;
 
-    // If it's a form element, stop the event from reaching dnd-kit
     if (isFormElement) {
       event.stopPropagation();
     }
@@ -72,13 +79,11 @@ export function SortableColumn({ column, onTaskCreated, onTaskUpdated }: Sortabl
       data-column-id={column.id}
       onKeyDown={handleKeyDown}
     >
-      {/* Drop indicator - left side */}
       {isDragging && (
         <div className="absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full shadow-lg z-10" />
       )}
 
       <div className="relative">
-        {/* Drag Handle for visual indication */}
         <div
           className="absolute -left-2 top-1/2 -translate-y-1/2 rounded p-1 hover:bg-accent opacity-50 hover:opacity-100"
           aria-label="Drag column"
@@ -87,8 +92,10 @@ export function SortableColumn({ column, onTaskCreated, onTaskUpdated }: Sortabl
         </div>
         <ColumnView
           column={column}
+          boardId={boardId}
           onTaskCreated={onTaskCreated}
           onTaskUpdated={onTaskUpdated}
+          onColumnUpdated={onColumnUpdated}
         />
       </div>
     </div>
