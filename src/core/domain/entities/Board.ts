@@ -11,11 +11,6 @@ import { BoardCreatedEvent, ColumnAddedEvent, ColumnRemovedEvent } from '../even
 import { TaskMovedEvent } from '../events/TaskEvents';
 import { DomainValidator } from '../validators/DomainValidator';
 
-/**
- * Aggregate Root - Board
- * Manages columns and tasks, enforcing business rules
- * Uses composition to manage child entities
- */
 export class Board extends Entity<BoardId> {
   private _title: string;
   private _ownerId: UserId;
@@ -31,7 +26,12 @@ export class Board extends Entity<BoardId> {
     this._createdAt = new Date();
     this._updatedAt = new Date();
 
-    new BoardCreatedEvent(this as unknown as Entity, id, this._title, ownerId.toString());
+    new BoardCreatedEvent(
+      this as unknown as Entity<string>,
+      id,
+      this._title,
+      ownerId.toString()
+    );
   }
 
   private validateTitle(title: string): void {
@@ -71,7 +71,12 @@ export class Board extends Entity<BoardId> {
 
     this._columns.push(column);
     this._updatedAt = new Date();
-    new ColumnAddedEvent(this as unknown as Entity, this.id, column.id, column.title);
+    new ColumnAddedEvent(
+      this as unknown as Entity<string>,
+      this.id,
+      column.id,
+      column.title
+    );
   }
 
   public removeColumn(columnId: ColumnId): void {
@@ -84,7 +89,11 @@ export class Board extends Entity<BoardId> {
     column.clearTasks();
     this._columns.splice(columnIndex, 1);
     this._updatedAt = new Date();
-    new ColumnRemovedEvent(this as unknown as Entity, this.id, columnId);
+    new ColumnRemovedEvent(
+      this as unknown as Entity<string>,
+      this.id,
+      columnId
+    );
   }
 
   public findColumn(columnId: ColumnId): Column | null {
@@ -96,11 +105,38 @@ export class Board extends Entity<BoardId> {
   }
 
   /**
-   * Moves a task from one column to another within the board.
-   * This is the primary method for task movement in the domain.
-   * Enforces business rules and emits domain events.
+   * Reorder columns within the board
+   * Updates order for all columns after reordering
    */
-  public moveTask(taskId: TaskId, fromColumnId: ColumnId, toColumnId: ColumnId): void {
+  public reorderColumn(columnId: ColumnId, newOrder: number): void {
+    const columnIndex = this._columns.findIndex(c => c.id.equals(columnId));
+    if (columnIndex === -1) {
+      throw new EntityNotFoundException('Column', columnId.toString());
+    }
+
+    if (newOrder < 0 || newOrder >= this._columns.length) {
+      throw new ValidationException('Invalid order position');
+    }
+
+    if (columnIndex === newOrder) {
+      return;
+    }
+
+    const [column] = this._columns.splice(columnIndex, 1);
+    this._columns.splice(newOrder, 0, column);
+
+    // Update order property on each column
+    for (let i = 0; i < this._columns.length; i++) {
+      this._columns[i].updateOrder(i);
+    }
+
+    this._updatedAt = new Date();
+  }
+
+  /**
+   * Move a task between columns within the board
+   */
+  public moveTask(taskId: TaskId, fromColumnId: ColumnId, toColumnId: ColumnId, newOrder?: number): void {
     const fromColumn = this.findColumn(fromColumnId);
     if (!fromColumn) {
       throw new EntityNotFoundException('Column', fromColumnId.toString());
@@ -116,16 +152,44 @@ export class Board extends Entity<BoardId> {
       throw new EntityNotFoundException('Task', taskId.toString());
     }
 
-    // Validate movement using specification
     DomainValidator.validateTaskMovement(task, fromColumn, toColumn);
 
-    // Perform the movement using column's internal method
-    fromColumn.moveTaskToColumn(taskId, toColumn);
-    
-    this._updatedAt = new Date();
+    fromColumn.removeTask(taskId);
+    toColumn.addTask(task);
 
-    // Emit domain event
-    new TaskMovedEvent(this as unknown as Entity, taskId, fromColumnId, toColumnId);
+    if (newOrder !== undefined) {
+      const taskIndex = toColumn.tasks.findIndex(t => t.id.equals(taskId));
+      if (taskIndex === -1) {
+        throw new EntityNotFoundException('Task', taskId.toString());
+      }
+      toColumn.reorderTask(taskId, newOrder);
+    }
+
+    this._updatedAt = new Date();
+    new TaskMovedEvent(
+      this as unknown as Entity<string>,
+      taskId,
+      fromColumnId,
+      toColumnId
+    );
+  }
+
+  /**
+   * Reorder a task within a specific column
+   */
+  public reorderTaskInColumn(columnId: ColumnId, taskId: TaskId, newOrder: number): void {
+    const column = this.findColumn(columnId);
+    if (!column) {
+      throw new EntityNotFoundException('Column', columnId.toString());
+    }
+
+    const task = column.findTask(taskId);
+    if (!task) {
+      throw new EntityNotFoundException('Task', taskId.toString());
+    }
+
+    column.reorderTask(taskId, newOrder);
+    this._updatedAt = new Date();
   }
 
   public findTaskInBoard(taskId: TaskId): BaseTask | null {
@@ -136,33 +200,6 @@ export class Board extends Entity<BoardId> {
       }
     }
     return null;
-  }
-
-  public reorderColumn(columnId: ColumnId, newPosition: number): void {
-    const columnIndex = this._columns.findIndex(c => c.id.equals(columnId));
-    if (columnIndex === -1) {
-      throw new EntityNotFoundException('Column', columnId.toString());
-    }
-
-    if (newPosition < 0 || newPosition >= this._columns.length) {
-      throw new ValidationException('Invalid position for column reordering');
-    }
-
-    const [column] = this._columns.splice(columnIndex, 1);
-    this._columns.splice(newPosition, 0, column);
-    this._updatedAt = new Date();
-  }
-
-  /**
-   * Reorders a task within a specific column
-   */
-  public reorderTaskInColumn(columnId: ColumnId, taskId: TaskId, newPosition: number): void {
-    const column = this.findColumn(columnId);
-    if (!column) {
-      throw new EntityNotFoundException('Column', columnId.toString());
-    }
-    column.reorderTask(taskId, newPosition);
-    this._updatedAt = new Date();
   }
 
   public getTotalTasks(): number {

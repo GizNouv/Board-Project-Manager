@@ -50,6 +50,7 @@ export default async function DashboardPage() {
         id: task.id.toString(),
         title: task.title,
         description: task.description,
+        columnId: column.id.toString(), // Add this
         estimate: {
           value: task.estimate.value,
           unit: task.estimate.unit,

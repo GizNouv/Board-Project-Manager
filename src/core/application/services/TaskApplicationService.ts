@@ -1,14 +1,17 @@
 import {
   ITaskRepository,
   IColumnRepository,
+  IBoardRepository,
   TaskFactory,
   TaskType,
   TaskId,
   ColumnId,
+  BoardId,
   UserId,
   BaseTask,
   Result,
   ResultFactory,
+  DomainException,
   EntityNotFoundException,
   ValidationException,
   DuplicateEntityException
@@ -18,14 +21,35 @@ import { CreateTaskDTO, UpdateTaskDTO, MoveTaskDTO, ReorderTaskDTO } from '../dt
 export class TaskApplicationService {
   constructor(
     private readonly taskRepository: ITaskRepository,
-    private readonly columnRepository: IColumnRepository
-  ) {}
+    private readonly columnRepository: IColumnRepository,
+    private readonly boardRepository: IBoardRepository
+  ) { }
 
   async createTask(dto: CreateTaskDTO): Promise<Result<BaseTask>> {
-    const columnResult = await this.columnRepository.findById(new ColumnId(dto.columnId));
-    if (columnResult.isFailure()) {
-      return ResultFactory.failure(columnResult.error);
+    console.log('🔵 TaskApplicationService.createTask() called');
+    console.log('  Column ID:', dto.columnId);
+    console.log('  Task Title:', dto.title);
+
+    const boardResult = await this.boardRepository.findBoardByColumnId(new ColumnId(dto.columnId));
+    if (boardResult.isFailure()) {
+      console.log('  ❌ Board not found for column');
+      return ResultFactory.failure(boardResult.error);
     }
+
+    const board = boardResult.value;
+    console.log('  Board loaded:', board.id.toString(), board.title);
+    console.log('  Columns in board:', board.columns.map(c => ({
+      id: c.id.toString(),
+      title: c.title,
+      taskCount: c.tasks.length
+    })));
+
+    const column = board.findColumn(new ColumnId(dto.columnId));
+    if (!column) {
+      console.log('  ❌ Column not found in board');
+      return ResultFactory.failure(new EntityNotFoundException('Column', dto.columnId));
+    }
+    console.log('  Column found:', column.id.toString(), column.title, 'tasks:', column.tasks.length);
 
     const task = TaskFactory.createTask(
       dto.type.toLowerCase() as TaskType,
@@ -39,16 +63,20 @@ export class TaskApplicationService {
         complexity: dto.complexity
       }
     );
+    console.log('  Task created:', task.id.toString(), task.type);
 
-    const column = columnResult.value;
-    column.addTask(task);
+    console.log('  Calling column.addTask() with skipValidation=true');
+    column.addTask(task, true);
+    console.log('  ✅ Task added to column');
 
-    const updateResult = await this.columnRepository.update(column);
-    if (updateResult.isFailure()) {
-      return ResultFactory.failure(updateResult.error);
+    const saveResult = await this.boardRepository.saveBoardWithColumns(board);
+    if (saveResult.isFailure()) {
+      console.log('  ❌ Failed to save board');
+      return ResultFactory.failure(saveResult.error);
     }
 
-    return await this.taskRepository.save(task);
+    console.log('  ✅ Board saved successfully');
+    return ResultFactory.success(task);
   }
 
   async getTask(id: string): Promise<Result<BaseTask>> {
@@ -66,7 +94,7 @@ export class TaskApplicationService {
   async updateTask(id: string, dto: UpdateTaskDTO): Promise<Result<BaseTask>> {
     const taskResult = await this.taskRepository.findById(new TaskId(id));
     if (taskResult.isFailure()) {
-      return ResultFactory.failure(taskResult.error);
+      return taskResult;
     }
 
     const task = taskResult.value;
@@ -99,7 +127,12 @@ export class TaskApplicationService {
       }
     }
 
-    return await this.taskRepository.update(task);
+    const updateResult = await this.taskRepository.update(task);
+    if (updateResult.isFailure()) {
+      return updateResult;
+    }
+
+    return ResultFactory.success(task);
   }
 
   async moveTask(dto: MoveTaskDTO): Promise<Result<void>> {

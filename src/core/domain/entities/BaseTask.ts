@@ -4,13 +4,8 @@ import { UserId } from '../value-objects/UserId';
 import { Priority } from '../value-objects/Priority';
 import { Estimate } from '../value-objects/Estimate';
 import { ValidationException } from '../exceptions/BaseExceptions';
-import { DomainConstants } from '../utils/Constants';
 import { TaskCreatedEvent } from '../events/TaskEvents';
 
-/**
- * Abstract aggregate entity representing a task
- * Implements encapsulation with private fields and getters
- */
 export abstract class BaseTask extends Entity<TaskId> {
   private _title: string;
   private _description: string;
@@ -40,16 +35,20 @@ export abstract class BaseTask extends Entity<TaskId> {
     this._updatedAt = new Date();
 
     if (emitEvent) {
-      new TaskCreatedEvent(this as unknown as Entity<string | number>, id, title);
+      new TaskCreatedEvent(
+        this as unknown as Entity<string>,
+        id,
+        title
+      );
     }
   }
 
   private validateTitle(title: string): void {
-    if (!title || title.trim().length < DomainConstants.TASK.MIN_TITLE_LENGTH) {
+    if (!title || title.trim().length < 1) {
       throw new ValidationException('Task title cannot be empty');
     }
-    if (title.length > DomainConstants.TASK.MAX_TITLE_LENGTH) {
-      throw new ValidationException(`Task title cannot exceed ${DomainConstants.TASK.MAX_TITLE_LENGTH} characters`);
+    if (title.length > 200) {
+      throw new ValidationException('Task title cannot exceed 200 characters');
     }
   }
 
