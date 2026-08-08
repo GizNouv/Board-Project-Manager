@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -28,6 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { createTaskAction } from '@/app/actions/task';
+import { TaskData } from '@/types/kanban';
 
 const createTaskSchema = z.object({
     title: z.string()
@@ -36,23 +36,29 @@ const createTaskSchema = z.object({
         .trim(),
     description: z.string().optional().default(''),
     priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
-    estimate: z.number()
-        .min(0, 'Estimate must be a positive number'),
+    estimate: z.number().min(0, 'Estimate must be a positive number'),
     estimateUnit: z.enum(['hours', 'days']),
 });
 
 type CreateTaskFormData = z.infer<typeof createTaskSchema>;
+type CreateTaskFormInput = z.input<typeof createTaskSchema>;
 
 interface CreateTaskDialogProps {
     columnId: string;
     trigger?: React.ReactNode;
+    onTaskCreated?: (task: TaskData) => void;
 }
 
-export function CreateTaskDialog({ columnId, trigger }: CreateTaskDialogProps) {
-    const router = useRouter();
+export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTaskDialogProps) {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    console.log('[CreateTaskDialog] render:', {
+        columnId,
+        hasOnTaskCreated: typeof onTaskCreated === 'function',
+        open,
+    });
 
     const {
         register,
@@ -60,7 +66,7 @@ export function CreateTaskDialog({ columnId, trigger }: CreateTaskDialogProps) {
         reset,
         setValue,
         formState: { errors },
-    } = useForm({
+    } = useForm<CreateTaskFormInput>({
         resolver: zodResolver(createTaskSchema),
         defaultValues: {
             title: '',
@@ -71,7 +77,11 @@ export function CreateTaskDialog({ columnId, trigger }: CreateTaskDialogProps) {
         },
     });
 
-    const onSubmit = async (data: CreateTaskFormData) => {
+    const onSubmit = async (data: CreateTaskFormInput) => {
+        console.log('========== CREATE TASK DEBUG: ACTION CALL ==========');
+        console.log('[CreateTaskDialog] form data:', data);
+        console.log('[CreateTaskDialog] columnId prop:', columnId);
+
         setIsLoading(true);
         setError(null);
 
@@ -85,15 +95,51 @@ export function CreateTaskDialog({ columnId, trigger }: CreateTaskDialogProps) {
                 columnId,
             });
 
+            console.log('========== CREATE TASK DEBUG: ACTION RESULT ==========');
+            console.log('[CreateTaskDialog] result:', result);
+            console.log('[CreateTaskDialog] result JSON:', JSON.stringify(result, null, 2));
+
             if (!result.success) {
+                console.log('[CreateTaskDialog] ❌ Action failed:', result.message);
                 setError(result.message);
                 return;
             }
 
+            console.log('[CreateTaskDialog] ✅ Task created successfully');
+
+            const taskData: TaskData = {
+                id: result.data.id,
+                title: result.data.title,
+                description: result.data.description,
+                columnId: result.data.columnId,
+                estimate: {
+                    value: result.data.estimate,
+                    unit: result.data.estimateUnit as 'hours' | 'days',
+                },
+                priority: {
+                    value: result.data.priority,
+                },
+                type: result.data.type,
+                assigneeId: result.data.assigneeId,
+            };
+
+            console.log('========== CREATE TASK DEBUG: CALLBACK ==========');
+            console.log('[CreateTaskDialog] onTaskCreated type:', typeof onTaskCreated);
+            console.log('[CreateTaskDialog] task being passed:', taskData);
+            console.log('[CreateTaskDialog] task being passed JSON:', JSON.stringify(taskData, null, 2));
+
+            if (onTaskCreated) {
+                console.log('>>> [CreateTaskDialog] CALLING onTaskCreated NOW');
+                onTaskCreated(taskData);
+                console.log('<<< [CreateTaskDialog] onTaskCreated RETURNED');
+            } else {
+                console.error('!!! [CreateTaskDialog] onTaskCreated IS UNDEFINED !!!');
+            }
+
             setOpen(false);
             reset();
-            router.refresh();
         } catch (err) {
+            console.error('[CreateTaskDialog] ❌ Unexpected error:', err);
             setError('An unexpected error occurred. Please try again.');
         } finally {
             setIsLoading(false);

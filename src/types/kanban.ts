@@ -11,6 +11,7 @@ export interface TaskData {
     };
     type: string;
     assigneeId: string | null;
+    columnId: string;
 }
 
 export interface ColumnData {

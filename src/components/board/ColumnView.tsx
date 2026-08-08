@@ -7,17 +7,27 @@ import { SortableTask } from './SortableTask';
 import { CreateTaskDialog } from '@/components/task/CreateTaskDialog';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { ColumnData } from '@/types/kanban';
+import { ColumnData, TaskData } from '@/types/kanban';
 import { useEffect } from 'react';
 
 interface ColumnViewProps {
     column: ColumnData;
     className?: string;
+    onTaskCreated?: (task: TaskData) => void;
 }
 
-export function ColumnView({ column, className }: ColumnViewProps) {
+export function ColumnView({ column, className, onTaskCreated }: ColumnViewProps) {
     const tasks = column.tasks;
     const taskCount = tasks.length;
+
+    // DEBUG: ColumnView render log
+    console.log('[ColumnView] render:', {
+        columnId: column.id,
+        columnTitle: column.title,
+        taskCount: tasks.length,
+        taskIds: tasks.map(task => task.id),
+        hasOnTaskCreated: typeof onTaskCreated === 'function',
+    });
 
     // Log when column renders and its tasks
     useEffect(() => {
@@ -69,6 +79,7 @@ export function ColumnView({ column, className }: ColumnViewProps) {
                         <p className="text-sm text-muted-foreground">No tasks yet</p>
                         <CreateTaskDialog
                             columnId={column.id}
+                            onTaskCreated={onTaskCreated}
                             trigger={
                                 <Button variant="ghost" size="sm" className="mt-2 text-muted-foreground">
                                     <Plus className="mr-2 h-4 w-4" />
@@ -86,6 +97,7 @@ export function ColumnView({ column, className }: ColumnViewProps) {
                         </SortableContext>
                         <CreateTaskDialog
                             columnId={column.id}
+                            onTaskCreated={onTaskCreated}
                             trigger={
                                 <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground">
                                     <Plus className="mr-2 h-4 w-4" />

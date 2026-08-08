@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   DndContext,
   rectIntersection,
@@ -39,6 +39,15 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
   const updateCounterRef = useRef(0);
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
   const boardId = initialBoard.id;
+
+  // DEBUG: BoardView render log
+  console.log('========== BOARDVIEW RENDER ==========');
+  console.log('[BoardView] columns:', columns.map(c => ({
+    id: c.id,
+    title: c.title,
+    taskCount: c.tasks.length,
+    taskIds: c.tasks.map(t => t.id),
+  })));
 
   // Log initial state
   useEffect(() => {
@@ -94,6 +103,59 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
     }),
     useSensor(KeyboardSensor)
   );
+
+  // ========== HANDLE TASK CREATED CALLBACK ==========
+  const handleTaskCreated = useCallback((newTask: TaskData) => {
+    console.log('========== BOARD TASK CREATED ==========');
+    console.log('[BoardView] handleTaskCreated CALLED');
+    console.log('[BoardView] received task:', newTask);
+    console.log('[BoardView] received task JSON:', JSON.stringify(newTask, null, 2));
+    console.log('[BoardView] received task.id:', newTask?.id);
+    console.log('[BoardView] received task.columnId:', newTask?.columnId);
+    console.log('[BoardView] current columns BEFORE update:', columns.map(c => ({
+      id: c.id,
+      title: c.title,
+      taskCount: c.tasks.length,
+      taskIds: c.tasks.map(t => t.id),
+    })));
+
+    setColumns(prevColumns => {
+      console.log('========== BOARD STATE UPDATE ==========');
+      console.log('[BoardView] prevColumns:', prevColumns.map(c => ({
+        id: c.id,
+        title: c.title,
+        taskCount: c.tasks.length,
+        taskIds: c.tasks.map(t => t.id),
+      })));
+
+      const updatedColumns = prevColumns.map(column => {
+        if (column.id === newTask.columnId) {
+          if (column.tasks.some(task => task.id === newTask.id)) {
+            console.log('[BoardView] Task already exists, skipping');
+            return column;
+          }
+          return {
+            ...column,
+            tasks: [...column.tasks, newTask],
+          };
+        }
+        return column;
+      });
+
+      console.log('[BoardView] updatedColumns:', updatedColumns.map(c => ({
+        id: c.id,
+        title: c.title,
+        taskCount: c.tasks.length,
+        taskIds: c.tasks.map(t => t.id),
+      })));
+
+      console.log('[BoardView] NEW TASK FOUND IN UPDATED STATE:', updatedColumns.some(column =>
+        column.tasks.some(task => task.id === newTask.id)
+      ));
+
+      return updatedColumns;
+    });
+  }, [columns]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -525,7 +587,6 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
         console.log('[DnD] newColumns updated');
         setColumns(newColumns);
 
-        // 🔥 PERSISTENCE: Call moveTaskAction (dropping at end)
         console.log('🔵 CALLING moveTaskAction (drop on column)');
         console.log('  taskId:', activeTaskId);
         console.log('  sourceColumnId:', activeColumnId);
@@ -629,7 +690,11 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
         >
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {columns.map((column) => (
-              <SortableColumn key={column.id} column={column} />
+              <SortableColumn
+                key={column.id}
+                column={column}
+                onTaskCreated={handleTaskCreated}
+              />
             ))}
           </div>
         </SortableContext>

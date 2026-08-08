@@ -3,15 +3,16 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ColumnView } from './ColumnView';
-import { ColumnData } from '@/types/kanban';
+import { ColumnData, TaskData } from '@/types/kanban';
 import { GripVertical } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 interface SortableColumnProps {
   column: ColumnData;
+  onTaskCreated?: (task: TaskData) => void;
 }
 
-export function SortableColumn({ column }: SortableColumnProps) {
+export function SortableColumn({ column, onTaskCreated }: SortableColumnProps) {
   const {
     attributes,
     listeners,
@@ -19,8 +20,6 @@ export function SortableColumn({ column }: SortableColumnProps) {
     transform,
     transition,
     isDragging,
-    over,
-    active,
   } = useSortable({
     id: `column-${column.id}`,
     data: {
@@ -29,13 +28,20 @@ export function SortableColumn({ column }: SortableColumnProps) {
     },
   });
 
-  const [dropPosition, setDropPosition] = useState<'left' | 'right' | null>(null);
-
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
   };
+
+  // DEBUG: SortableColumn render log
+  console.log('[SortableColumn] render:', {
+    columnId: column.id,
+    columnTitle: column.title,
+    taskCount: column.tasks.length,
+    taskIds: column.tasks.map(task => task.id),
+    hasOnTaskCreated: typeof onTaskCreated === 'function',
+  });
 
   // Log when SortableColumn renders with drag state
   useEffect(() => {
@@ -46,6 +52,7 @@ export function SortableColumn({ column }: SortableColumnProps) {
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
 
+    // Check if the target or its parent is a form element
     const isFormElement =
       target.tagName === 'INPUT' ||
       target.tagName === 'TEXTAREA' ||
@@ -58,54 +65,11 @@ export function SortableColumn({ column }: SortableColumnProps) {
       target.closest('[role="dialog"]') !== null ||
       target.closest('[contenteditable="true"]') !== null;
 
+    // If it's a form element, stop the event from reaching dnd-kit
     if (isFormElement) {
       event.stopPropagation();
     }
   };
-
-  // Determine if this column is being hovered over during a drag (drop target)
-  const isDropTarget = over?.id === `column-${column.id}` && !isDragging && active?.id !== `column-${column.id}`;
-
-  // Update drop position when hovering over the column
-  useEffect(() => {
-    if (isDropTarget && over) {
-      const element = document.querySelector(`[data-column-id="${column.id}"]`);
-      if (element) {
-        const rect = element.getBoundingClientRect();
-        // Try to get mouse position from the over event
-        let mouseX = rect.left + rect.width / 2;
-        if ((over as any).rect?.left !== undefined) {
-          mouseX = (over as any).rect.left;
-        }
-        const isLeftHalf = mouseX < rect.left + rect.width / 2;
-        setDropPosition(isLeftHalf ? 'left' : 'right');
-      }
-    } else {
-      setDropPosition(null);
-    }
-  }, [isDropTarget, over, column.id]);
-
-  // Real-time mouse tracking for drop position
-  useEffect(() => {
-    if (!isDropTarget) {
-      setDropPosition(null);
-      return;
-    }
-
-    const handlePointerMove = (e: PointerEvent) => {
-      const element = document.querySelector(`[data-column-id="${column.id}"]`);
-      if (element) {
-        const rect = element.getBoundingClientRect();
-        const isLeftHalf = e.clientX < rect.left + rect.width / 2;
-        setDropPosition(isLeftHalf ? 'left' : 'right');
-      }
-    };
-
-    document.addEventListener('pointermove', handlePointerMove);
-    return () => {
-      document.removeEventListener('pointermove', handlePointerMove);
-    };
-  }, [isDropTarget, column.id]);
 
   return (
     <div
@@ -117,14 +81,9 @@ export function SortableColumn({ column }: SortableColumnProps) {
       data-column-id={column.id}
       onKeyDown={handleKeyDown}
     >
-      {/* Drop indicator - LEFT side (column will be inserted BEFORE this one) */}
-      {isDropTarget && dropPosition === 'left' && (
-        <div className="absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full shadow-lg z-20" />
-      )}
-
-      {/* Drop indicator - RIGHT side (column will be inserted AFTER this one) */}
-      {isDropTarget && dropPosition === 'right' && (
-        <div className="absolute -right-2 top-0 bottom-0 w-1 bg-primary rounded-full shadow-lg z-20" />
+      {/* Drop indicator - left side */}
+      {isDragging && (
+        <div className="absolute -left-2 top-0 bottom-0 w-1 bg-primary rounded-full shadow-lg z-10" />
       )}
 
       <div className="relative">
@@ -135,7 +94,8 @@ export function SortableColumn({ column }: SortableColumnProps) {
         >
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
-        <ColumnView column={column} />
+        {/* ✅ Pass onTaskCreated down to ColumnView */}
+        <ColumnView column={column} onTaskCreated={onTaskCreated} />
       </div>
     </div>
   );
