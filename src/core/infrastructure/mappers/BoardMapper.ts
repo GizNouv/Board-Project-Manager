@@ -1,10 +1,15 @@
-import { Board as PrismaBoard, Column as PrismaColumn } from '@prisma/client';
+import { Board as PrismaBoard, Column as PrismaColumn, Task as PrismaTask } from '@prisma/client';
 import { Board, BoardId, UserId, Column } from '../../domain';
 import { Mapper } from './Mapper';
 import { ColumnMapper } from './ColumnMapper';
+import { TaskMapper } from './TaskMapper';
 
-type PrismaBoardWithColumns = PrismaBoard & {
-  columns?: PrismaColumn[];
+type PrismaBoardWithRelations = PrismaBoard & {
+  columns?: (PrismaColumn & {
+    tasks?: (PrismaTask & {
+      assignee?: { id: string } | null;
+    })[];
+  })[];
 };
 
 /**
@@ -12,16 +17,17 @@ type PrismaBoardWithColumns = PrismaBoard & {
  * Supports optional column mapping for eager loading scenarios
  * Dependency direction: Infrastructure -> Domain
  */
-export class BoardMapper implements Mapper<Board, PrismaBoardWithColumns> {
+export class BoardMapper implements Mapper<Board, PrismaBoardWithRelations> {
   private columnMapper = new ColumnMapper();
 
-  public toDomain(prismaBoard: PrismaBoardWithColumns): Board {
+  public toDomain(prismaBoard: PrismaBoardWithRelations): Board {
     const board = new Board(
       new BoardId(prismaBoard.id),
       prismaBoard.title,
       new UserId(prismaBoard.ownerId)
     );
 
+    // If columns are included, add them to the board
     if (prismaBoard.columns && prismaBoard.columns.length > 0) {
       const sortedColumns = [...prismaBoard.columns].sort((a, b) => a.order - b.order);
       for (const prismaColumn of sortedColumns) {
@@ -51,7 +57,11 @@ export class BoardMapper implements Mapper<Board, PrismaBoardWithColumns> {
     };
   }
 
-  public toDomainWithColumns(prismaBoard: PrismaBoardWithColumns): Board {
+  /**
+   * Maps a board with its columns in one operation
+   * Useful for aggregate root persistence
+   */
+  public toDomainWithColumns(prismaBoard: PrismaBoardWithRelations): Board {
     return this.toDomain(prismaBoard);
   }
 }

@@ -49,7 +49,6 @@ export class FeatureTask extends BaseTask {
   }
 
   public override calculateStoryPoints(): number {
-    // Features: points based on complexity and estimates
     const basePoints = this.estimate.toHours() / 4;
     const complexityMultiplier = {
       low: 1,
@@ -59,18 +58,36 @@ export class FeatureTask extends BaseTask {
     return Math.round(basePoints * complexityMultiplier[this._complexity]);
   }
 
+  private normalizeColumnTitle(title: string): string {
+    return title
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '')
+      .replace(/-/g, '');
+  }
+
   public override canMoveTo(columnTitle: string): boolean {
-    // Features can move through standard workflow with dependency checks
-    const lowerTitle = columnTitle.toLowerCase();
-    const validColumns = ['backlog', 'todo', 'in progress', 'review', 'done'];
-    
-    // Check if all dependencies are completed (simplified)
+    console.log('🔵 FeatureTask.canMoveTo() called');
+    console.log('  Column Title:', columnTitle);
+    console.log('  Task ID:', this.id.toString());
+    console.log('  Dependencies:', this._dependencies.length);
+
+    const normalized = this.normalizeColumnTitle(columnTitle);
+    console.log('  Normalized:', normalized);
+
+    const validColumns = ['backlog', 'todo', 'inprogress', 'review', 'done'];
+    console.log('  Valid Columns:', validColumns);
+    console.log('  Is in valid columns?', validColumns.includes(normalized));
+
     const hasDependencies = this._dependencies.length > 0;
-    if (hasDependencies && lowerTitle === 'done') {
-      return false; // Can't complete feature with unresolved dependencies
+    if (hasDependencies && normalized === 'done') {
+      console.log('  ❌ Has dependencies and moving to done - blocked');
+      return false;
     }
-    
-    return validColumns.includes(lowerTitle);
+
+    const result = validColumns.includes(normalized);
+    console.log('  ✅ Final result:', result);
+    return result;
   }
 
   public override badgeColor(): string {

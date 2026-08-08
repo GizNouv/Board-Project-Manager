@@ -34,7 +34,6 @@ export class BugTask extends BaseTask {
   }
 
   public override calculateStoryPoints(): number {
-    // Bugs: points based on severity
     const basePoints = this.estimate.toHours() / 2;
     const severityMultiplier = {
       minor: 1,
@@ -44,15 +43,23 @@ export class BugTask extends BaseTask {
     return Math.round(basePoints * severityMultiplier[this._severity]);
   }
 
+  private normalizeColumnTitle(title: string): string {
+    return title
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '')
+      .replace(/-/g, '');
+  }
+
   public override canMoveTo(columnTitle: string): boolean {
-    // Bugs can only move to specific columns based on severity
-    const lowerTitle = columnTitle.toLowerCase();
-    
+    const normalized = this.normalizeColumnTitle(columnTitle);
+    const validColumns = ['todo', 'inprogress', 'review', 'done'];
+
     if (this._severity === 'critical') {
-      return ['todo', 'in progress', 'review', 'done'].includes(lowerTitle);
+      return validColumns.includes(normalized);
     }
-    
-    return ['todo', 'in progress', 'review', 'done'].includes(lowerTitle);
+
+    return validColumns.includes(normalized);
   }
 
   public override badgeColor(): string {
