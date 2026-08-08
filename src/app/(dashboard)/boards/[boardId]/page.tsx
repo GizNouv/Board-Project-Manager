@@ -38,6 +38,27 @@ export default async function BoardPage({ params }: BoardPageProps) {
     const boardDTO = {
         id: board.id.toString(),
         title: board.title,
+        columns: board.columns.map((column) => ({
+            id: column.id.toString(),
+            title: column.title,
+            boardId: column.boardId,
+            order: column.order,
+            tasks: column.tasks.map((task) => ({
+                id: task.id.toString(),
+                title: task.title,
+                description: task.description,
+                columnId: column.id.toString(), // Add this
+                estimate: {
+                    value: task.estimate.value,
+                    unit: task.estimate.unit,
+                },
+                priority: {
+                    value: task.priority.value,
+                },
+                type: task.type,
+                assigneeId: task.assigneeId?.toString() || null,
+            })),
+        })),
     };
 
     const columnDTOs = board.columns.map((column) => ({

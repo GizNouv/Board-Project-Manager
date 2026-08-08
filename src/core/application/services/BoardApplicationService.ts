@@ -10,7 +10,8 @@ import {
   ResultFactory,
   EntityNotFoundException,
   ValidationException,
-  DuplicateEntityException
+  DuplicateEntityException,
+  TaskId
 } from '../../domain';
 import { CreateBoardDTO, UpdateBoardDTO, CreateColumnDTO, UpdateColumnDTO } from '../dto/BoardDTOs';
 
@@ -18,7 +19,7 @@ export class BoardApplicationService {
   constructor(
     private readonly boardRepository: IBoardRepository,
     private readonly columnRepository: IColumnRepository
-  ) {}
+  ) { }
 
   async createBoard(dto: CreateBoardDTO): Promise<Result<Board>> {
     if (!dto.title || dto.title.trim().length === 0) {
@@ -93,22 +94,28 @@ export class BoardApplicationService {
       return ResultFactory.failure(boardResult.error);
     }
 
+    const board = boardResult.value;
+
+    const existingColumns = board.columns;
+    const nextOrder = existingColumns.length > 0
+      ? Math.max(...existingColumns.map(col => col.order)) + 1
+      : 0;
+
     const column = new Column(
       new ColumnId(crypto.randomUUID()),
       dto.title,
       dto.boardId,
-      dto.order || 0
+      nextOrder
     );
 
-    const board = boardResult.value;
     board.addColumn(column);
 
-    const updateResult = await this.boardRepository.update(board);
-    if (updateResult.isFailure()) {
-      return ResultFactory.failure(updateResult.error);
+    const result = await this.boardRepository.saveBoardWithColumns(board);
+    if (result.isFailure()) {
+      return ResultFactory.failure(result.error);
     }
 
-    return await this.columnRepository.save(column);
+    return ResultFactory.success(column);
   }
 
   async getColumn(id: string): Promise<Result<Column>> {
@@ -167,5 +174,86 @@ export class BoardApplicationService {
 
   async reorderColumn(columnId: string, newPosition: number): Promise<Result<void>> {
     return await this.columnRepository.reorderColumn(new ColumnId(columnId), newPosition);
+  }
+
+  // ============== DEDICATED TASK PERSISTENCE METHODS ==============
+
+  async reorderTasks(
+    columnId: string,
+    orderedTaskIds: string[]
+  ): Promise<Result<void>> {
+    console.log('[MOVE SERVICE] reorderTasks called');
+    console.log('  columnId:', columnId);
+    console.log('  orderedTaskIds:', orderedTaskIds);
+
+    if (!orderedTaskIds || orderedTaskIds.length === 0) {
+      return ResultFactory.failure(new ValidationException('Ordered task IDs cannot be empty'));
+    }
+
+    const uniqueIds = new Set(orderedTaskIds);
+    if (uniqueIds.size !== orderedTaskIds.length) {
+      return ResultFactory.failure(new ValidationException('Duplicate task IDs in order list'));
+    }
+
+    return await this.boardRepository.reorderTasks(
+      new ColumnId(columnId),
+      orderedTaskIds
+    );
+  }
+
+  async moveTask(
+    taskId: string,
+    sourceColumnId: string,
+    targetColumnId: string,
+    targetOrder: number,
+    sourceTaskIds: string[],
+    targetTaskIds: string[]
+  ): Promise<Result<void>> {
+    console.log('[MOVE SERVICE]');
+    console.log('  taskId:', taskId);
+    console.log('  sourceColumnId:', sourceColumnId);
+    console.log('  targetColumnId:', targetColumnId);
+    console.log('  targetOrder:', targetOrder);
+    console.log('  sourceTaskIds:', sourceTaskIds);
+    console.log('  targetTaskIds:', targetTaskIds);
+
+    // Allow source column to become empty
+    // Only validate target column has tasks
+    if (!targetTaskIds || targetTaskIds.length === 0) {
+      return ResultFactory.failure(new ValidationException('Target task IDs cannot be empty'));
+    }
+
+    // Verify source task IDs are unique
+    const sourceUnique = new Set(sourceTaskIds);
+    if (sourceUnique.size !== sourceTaskIds.length) {
+      return ResultFactory.failure(new ValidationException('Duplicate source task IDs'));
+    }
+
+    // Verify target task IDs are unique
+    const targetUnique = new Set(targetTaskIds);
+    if (targetUnique.size !== targetTaskIds.length) {
+      return ResultFactory.failure(new ValidationException('Duplicate target task IDs'));
+    }
+
+    // Verify no overlap between source and target
+    const overlap = sourceTaskIds.some(id => targetTaskIds.includes(id));
+    if (overlap) {
+      return ResultFactory.failure(new ValidationException('Task IDs overlap between source and target'));
+    }
+
+    // Verify targetOrder is within bounds
+    if (targetOrder < 0 || targetOrder > targetTaskIds.length) {
+      return ResultFactory.failure(new ValidationException('Target order out of bounds'));
+    }
+
+    console.log('[MOVE SERVICE] Validation passed, calling repository.moveTask...');
+    return await this.boardRepository.moveTask(
+      new TaskId(taskId),
+      new ColumnId(sourceColumnId),
+      new ColumnId(targetColumnId),
+      targetOrder,
+      sourceTaskIds,
+      targetTaskIds
+    );
   }
 }
