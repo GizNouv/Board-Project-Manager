@@ -7,10 +7,6 @@ import { DomainConstants } from '../utils/Constants';
 import { TaskReorderedEvent } from '../events/TaskEvents';
 import { DomainValidator } from '../validators/DomainValidator';
 
-/**
- * Column entity - composed by Board aggregate
- * Manages tasks within a column with business rule enforcement
- */
 export class Column extends Entity<ColumnId> {
   private _title: string;
   private _boardId: string;
@@ -57,7 +53,7 @@ export class Column extends Entity<ColumnId> {
     this._updatedAt = new Date();
   }
 
-  public addTask(task: BaseTask): void {
+  public addTask(task: BaseTask, skipValidation: boolean = false): void {
     if (!task) {
       throw new ValidationException('Task cannot be null');
     }
@@ -66,8 +62,10 @@ export class Column extends Entity<ColumnId> {
       throw new DuplicateEntityException('Task', task.id.toString());
     }
 
-    if (!task.canMoveTo(this._title)) {
-      throw new ValidationException(`Task cannot be moved to column "${this._title}"`);
+    if (!skipValidation) {
+      if (!task.canMoveTo(this._title)) {
+        throw new ValidationException(`Task cannot be moved to column "${this._title}"`);
+      }
     }
 
     this._tasks.push(task);
@@ -83,11 +81,32 @@ export class Column extends Entity<ColumnId> {
     this._updatedAt = new Date();
   }
 
-  /**
-   * Moves a task from this column to another column.
-   * This method should be called by the Board aggregate root
-   * to ensure proper business rule enforcement.
-   */
+  public reorderTask(taskId: TaskId, newOrder: number): void {
+    const taskIndex = this._tasks.findIndex(t => t.id.equals(taskId));
+    if (taskIndex === -1) {
+      throw new EntityNotFoundException('Task', taskId.toString());
+    }
+
+    if (newOrder < 0 || newOrder >= this._tasks.length) {
+      throw new ValidationException('Invalid position for task reordering');
+    }
+
+    if (taskIndex === newOrder) {
+      return;
+    }
+
+    const [task] = this._tasks.splice(taskIndex, 1);
+    this._tasks.splice(newOrder, 0, task);
+    this._updatedAt = new Date();
+
+    new TaskReorderedEvent(
+      this as unknown as Entity<string>,
+      taskId,
+      this.id,
+      newOrder
+    );
+  }
+
   public moveTaskToColumn(taskId: TaskId, targetColumn: Column): void {
     if (!targetColumn) {
       throw new ValidationException('Target column cannot be null');
@@ -98,28 +117,8 @@ export class Column extends Entity<ColumnId> {
       throw new EntityNotFoundException('Task', taskId.toString());
     }
 
-    // Remove from current column
     this.removeTask(taskId);
-    
-    // Add to target column
     targetColumn.addTask(task);
-  }
-
-  public reorderTask(taskId: TaskId, newPosition: number): void {
-    const taskIndex = this._tasks.findIndex(t => t.id.equals(taskId));
-    if (taskIndex === -1) {
-      throw new EntityNotFoundException('Task', taskId.toString());
-    }
-
-    if (newPosition < 0 || newPosition >= this._tasks.length) {
-      throw new ValidationException('Invalid position for task reordering');
-    }
-
-    const [task] = this._tasks.splice(taskIndex, 1);
-    this._tasks.splice(newPosition, 0, task);
-    this._updatedAt = new Date();
-
-    new TaskReorderedEvent(this as unknown as Entity<string | number>, taskId, this.id, newPosition);
   }
 
   public findTask(taskId: TaskId): BaseTask | null {

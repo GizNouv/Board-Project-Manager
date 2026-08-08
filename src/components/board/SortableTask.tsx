@@ -3,21 +3,8 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { TaskCard } from './TaskCard';
-
-interface TaskData {
-    id: string;
-    title: string;
-    description: string;
-    estimate: {
-        value: number;
-        unit: string;
-    };
-    priority: {
-        value: string;
-    };
-    type: string;
-    assigneeId: string | null;
-}
+import { TaskData } from '@/types/kanban';
+import { useEffect } from 'react';
 
 interface SortableTaskProps {
     task: TaskData;
@@ -25,6 +12,13 @@ interface SortableTaskProps {
 }
 
 export function SortableTask({ task, columnId }: SortableTaskProps) {
+    const sortableId = `${columnId}-task-${task.id}`;
+
+    // Log when SortableTask renders
+    useEffect(() => {
+        console.log(`  🔹 SortableTask render: ${sortableId}`);
+    }, [sortableId]);
+
     const {
         attributes,
         listeners,
@@ -33,13 +27,19 @@ export function SortableTask({ task, columnId }: SortableTaskProps) {
         transition,
         isDragging,
     } = useSortable({
-        id: `${columnId}-task-${task.id}`,
+        id: sortableId,
+        data: {
+            type: 'task',
+            taskId: task.id,
+            columnId: columnId,
+        },
     });
 
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.5 : 1,
+        opacity: isDragging ? 0.4 : 1,
+        cursor: isDragging ? 'grabbing' : 'grab',
     };
 
     return (
