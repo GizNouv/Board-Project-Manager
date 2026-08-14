@@ -1,0 +1,280 @@
+# Board Project Manager — Cline Rules
+
+## Core Principle
+
+Make the smallest possible change required to complete the explicitly requested task.
+
+Do not refactor, redesign, or "improve" unrelated code.
+
+If the requested change can be completed without modifying a file, do not modify that file.
+
+---
+
+## Architecture
+
+This project uses DDD/OOP architecture.
+
+Respect the existing layers:
+
+- `src/core/domain` → domain entities, value objects, domain rules
+- `src/core/application` → application services, DTOs
+- `src/core/infrastructure` → Prisma, repositories, mappers
+- `src/app/actions` → Server Actions
+- `src/components` → UI/presentation
+- `src/hooks` → client-side behavior/interaction logic
+- `src/stores` → client-side state only
+
+Do not move business/domain logic into Zustand stores.
+
+Zustand stores must contain:
+
+- state
+- simple state setters/mutations
+
+Zustand stores must NOT contain:
+
+- server calls
+- business rules
+- D&D algorithms
+- validation logic
+- persistence logic
+
+---
+
+## Refactoring Rule
+
+During a refactoring phase:
+
+- Preserve behavior exactly.
+- Do not redesign algorithms.
+- Do not introduce new abstractions unless explicitly requested.
+- Do not change public behavior.
+- Do not change database behavior.
+- Do not change API/server-action behavior.
+- Do not modify unrelated components.
+
+Refactoring means moving existing logic, not rewriting it.
+
+---
+
+## Scope Control
+
+Before editing:
+
+1. Identify the exact requested files.
+2. Identify the exact requested responsibility.
+3. Inspect the existing implementation.
+4. Make the minimum required changes.
+
+Do not expand scope because you discover unrelated problems.
+
+If an unrelated problem is discovered:
+
+STOP and report it.
+
+Do not fix it unless explicitly instructed.
+
+---
+
+## Phase Discipline
+
+Only implement the current requested step.
+
+Never automatically continue to the next phase or step.
+
+After the requested step is complete:
+
+STOP.
+
+Report:
+
+- files changed
+- files created
+- behavior changed
+- tests performed
+- TypeScript result
+- build result
+- remaining work
+
+Then wait for approval.
+
+---
+
+## Existing Functionality Is Protected
+
+The following functionality must not regress:
+
+- task creation
+- task editing
+- column editing
+- board editing
+- column drag & drop
+- task drag & drop within a column
+- task movement between columns
+- moving the last task out of a column
+- optimistic UI updates
+- rollback after failed server actions
+- DragOverlay
+- task forms
+- column forms
+- board forms
+
+If a change breaks one of these:
+
+STOP.
+
+Do not start unrelated fixes.
+
+---
+
+## D&D Rules
+
+The project uses `dnd-kit`.
+
+Do not modify:
+
+- DndContext configuration
+- collision detection
+- drag IDs
+- drag data structure
+- sensors
+- DragOverlay
+- drag algorithms
+
+unless the current task explicitly requires it.
+
+When migrating D&D logic:
+
+MOVE the existing implementation.
+
+Do not rewrite or simplify the algorithm.
+
+Preserve:
+
+- column reordering
+- task reordering
+- cross-column movement
+- last-task movement
+- optimistic updates
+- rollback
+- drop positioning
+
+---
+
+## Forms
+
+Forms are critical.
+
+Never modify form event handling, controlled/uncontrolled state, or input propagation unless the current task explicitly requires it.
+
+After any UI refactor, verify that:
+
+- title fields accept typing
+- description fields accept typing
+- select fields work
+- dialogs open and close
+- submit works
+
+A form becoming non-typeable is a blocking regression.
+
+---
+
+## State Synchronization
+
+Do not blindly synchronize server props into client state.
+
+Avoid patterns such as:
+
+`useEffect(() => setColumns(serverColumns), [serverColumns])`
+
+when client-side optimistic state exists.
+
+Never overwrite optimistic client state merely because a parent component re-rendered.
+
+Board state must have one clear client-side source of truth.
+
+---
+
+## Dependencies
+
+Do not install new packages unless explicitly requested or clearly required.
+
+If a new dependency appears necessary:
+
+STOP and ask for approval.
+
+---
+
+## Validation
+
+After implementation, run:
+
+`npx tsc --noEmit`
+
+and, when relevant:
+
+`npm run build`
+
+Do not claim completion without reporting the actual result.
+
+---
+
+## Git Safety
+
+Do not:
+
+- reset
+- revert
+- checkout another branch
+- discard user changes
+- rewrite history
+- run destructive git commands
+
+unless explicitly instructed.
+
+Preserve existing user work.
+
+---
+
+## Communication
+
+Do not repeatedly explain the entire project.
+
+Focus on:
+
+1. What was requested
+2. What you changed
+3. What was tested
+4. What remains
+
+If the task is ambiguous, STOP and ask.
+
+If implementation takes significantly longer than expected, inspect whether scope has expanded before continuing.
+
+# Critical Rule: Preserve Working D&D
+
+The board drag-and-drop system is existing, working functionality.
+
+NEVER rewrite, redesign, optimize, or restructure D&D logic unless explicitly instructed.
+
+For D&D-related changes:
+
+1. Make the smallest possible change.
+2. Never modify multiple D&D behaviors in one operation.
+3. Never rewrite handleDragEnd wholesale.
+4. Never copy a large function between files as a single operation.
+5. Never change drag algorithms and architecture simultaneously.
+6. Never modify DndContext configuration unless explicitly requested.
+7. Never modify collision detection unless explicitly requested.
+8. Never modify drag sensors unless explicitly requested.
+9. Never modify server actions during a D&D refactor.
+10. After every D&D change, run:
+   npx tsc --noEmit
+
+If TypeScript fails, stop and fix only the introduced problem.
+
+If the requested change requires touching more than 100 lines of D&D code, STOP and ask for approval.
+
+Do not continue automatically to another step.
+
+The current behavior is more important than architectural cleanliness.
