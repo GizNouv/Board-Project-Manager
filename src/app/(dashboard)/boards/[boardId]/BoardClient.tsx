@@ -2,8 +2,9 @@
 
 import { useState, useCallback } from 'react';
 import { BoardView } from '@/components/board/BoardView';
-import { EditBoardDialog } from '@/components/board/EditBoardDialog';
+import { BoardHeader } from '@/components/board/BoardHeader';
 import { BoardData } from '@/types/kanban';
+import { EmptyColumnState } from '@/components/board/EmptyColumnState';
 
 interface BoardClientProps {
     board: BoardData;
@@ -20,22 +21,42 @@ export function BoardClient({ board: initialBoard, boardId }: BoardClientProps) 
         }));
     }, []);
 
+    const handleColumnCreated = useCallback((newColumn: any) => {
+        setBoard((prev) => ({
+            ...prev,
+            columns: [...prev.columns, newColumn],
+        }));
+    }, []);
+
+    const handleColumnDeleted = useCallback((columnId: string) => {
+        setBoard((prev) => ({
+            ...prev,
+            columns: prev.columns.filter((col) => col.id !== columnId),
+        }));
+    }, []);
+
+    const handleBoardDeleted = useCallback(() => {
+        // The router will handle navigation
+    }, []);
+
+    const hasColumns = board.columns && board.columns.length > 0;
+
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <h1 className="text-3xl font-bold tracking-tight">{board.title}</h1>
-                    <EditBoardDialog
-                        board={board}
-                        onBoardUpdated={handleBoardUpdated}
-                    />
-                    <p className="text-muted-foreground ml-4">
-                        Manage your tasks and track progress
-                    </p>
-                </div>
-            </div>
+            <BoardHeader
+                title={board.title}
+                boardId={boardId}
+                updatedAt={board.updatedAt}
+                onColumnCreated={handleColumnCreated}
+                onBoardUpdated={handleBoardUpdated}
+                onBoardDeleted={handleBoardDeleted}
+            />
 
-            <BoardView board={board} />
+            {hasColumns ? (
+                <BoardView board={board} />
+            ) : (
+                <EmptyColumnState boardId={boardId} />
+            )}
         </div>
     );
 }

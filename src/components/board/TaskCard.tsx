@@ -1,16 +1,24 @@
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { TaskData } from '@/types/kanban';
+import { TaskMenu } from './TaskMenu';
 import { EditTaskDialog } from '@/components/task/EditTaskDialog';
+import { deleteTaskAction } from '@/app/actions/task';
 
 interface TaskCardProps {
     task: TaskData;
     className?: string;
     onTaskUpdated?: (task: TaskData) => void;
+    onTaskDeleted?: (taskId: string) => void;
+    columnId: string;
 }
 
-export function TaskCard({ task, className, onTaskUpdated }: TaskCardProps) {
+export function TaskCard({ task, className, onTaskUpdated, onTaskDeleted, columnId }: TaskCardProps) {
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+
     const priorityColors = {
         LOW: 'bg-green-500/10 text-green-700 dark:text-green-400',
         MEDIUM: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400',
@@ -24,70 +32,86 @@ export function TaskCard({ task, className, onTaskUpdated }: TaskCardProps) {
         epic: 'bg-purple-500/10 text-purple-700 dark:text-purple-400',
     };
 
+    const handleEdit = () => {
+        setEditDialogOpen(true);
+    };
+
+    const handleDelete = async () => {
+        setIsDeleting(true);
+        try {
+            const result = await deleteTaskAction({
+                taskId: task.id,
+                columnId: columnId,
+            });
+            if (result.success && onTaskDeleted) {
+                onTaskDeleted(task.id);
+            }
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     return (
-        <Card className={cn('overflow-hidden', className)}>
-            <CardHeader className="p-3">
-                <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-sm font-medium leading-tight line-clamp-2 flex-1">
-                        {task.title}
-                    </CardTitle>
-                    {/* Edit button - opens EditTaskDialog */}
-                    {onTaskUpdated && (
-                        <EditTaskDialog
+        <>
+            <Card className={cn('overflow-hidden', className)}>
+                <CardHeader className="p-3">
+                    <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="text-sm font-medium leading-tight line-clamp-2 flex-1">
+                            {task.title}
+                        </CardTitle>
+                        <TaskMenu
                             task={task}
-                            onTaskUpdated={onTaskUpdated}
-                            trigger={
-                                <button
-                                    className="h-6 w-6 shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                                    aria-label="Edit task"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                        <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                    </svg>
-                                </button>
-                            }
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                            isDeleting={isDeleting}
                         />
+                    </div>
+                    {task.description && (
+                        <CardDescription className="line-clamp-2 text-xs">
+                            {task.description}
+                        </CardDescription>
                     )}
-                </div>
-                {task.description && (
-                    <CardDescription className="line-clamp-2 text-xs">
-                        {task.description}
-                    </CardDescription>
-                )}
-            </CardHeader>
-            <CardContent className="p-3 pt-0 space-y-2">
-                <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge
-                        variant="secondary"
-                        className={cn(
-                            'text-xs font-medium',
-                            priorityColors[task.priority.value as keyof typeof priorityColors] || ''
+                </CardHeader>
+                <CardContent className="p-3 pt-0 space-y-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge
+                            variant="secondary"
+                            className={cn(
+                                'text-xs font-medium',
+                                priorityColors[task.priority.value as keyof typeof priorityColors] || ''
+                            )}
+                        >
+                            {task.priority.value}
+                        </Badge>
+                        <Badge
+                            variant="outline"
+                            className={cn(
+                                'text-xs font-medium',
+                                typeColors[task.type as keyof typeof typeColors] || ''
+                            )}
+                        >
+                            {task.type}
+                        </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        {task.estimate && (
+                            <span>
+                                {task.estimate.value} {task.estimate.unit}
+                            </span>
                         )}
-                    >
-                        {task.priority.value}
-                    </Badge>
-                    <Badge
-                        variant="outline"
-                        className={cn(
-                            'text-xs font-medium',
-                            typeColors[task.type as keyof typeof typeColors] || ''
+                        {task.assigneeId && (
+                            <span>👤 Assigned</span>
                         )}
-                    >
-                        {task.type}
-                    </Badge>
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    {task.estimate && (
-                        <span>
-                            {task.estimate.value} {task.estimate.unit}
-                        </span>
-                    )}
-                    {task.assigneeId && (
-                        <span>👤 Assigned</span>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <EditTaskDialog
+                task={task}
+                open={editDialogOpen}
+                onOpenChange={setEditDialogOpen}
+                onTaskUpdated={onTaskUpdated}
+            />
+        </>
     );
 }

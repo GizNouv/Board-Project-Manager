@@ -26,4 +26,6 @@ export interface BoardData {
     id: string;
     title: string;
     columns: ColumnData[];
+    createdAt?: string;
+    updatedAt?: string;
 }

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Pencil } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -13,7 +13,6 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog';
 import {
     Select,
@@ -42,64 +41,74 @@ const editTaskSchema = z.object({
     complexity: z.enum(['low', 'medium', 'high']).optional(),
 });
 
-type EditTaskFormData = z.infer<typeof editTaskSchema>;
-type EditTaskFormInput = z.input<typeof editTaskSchema>;
+// Use z.input for the form type
+type EditTaskFormData = z.input<typeof editTaskSchema>;
 
 interface EditTaskDialogProps {
     task: TaskData;
-    trigger?: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
     onTaskUpdated?: (task: TaskData) => void;
 }
 
-export function EditTaskDialog({ task, trigger, onTaskUpdated }: EditTaskDialogProps) {
-    const [open, setOpen] = useState(false);
+export function EditTaskDialog({
+    task,
+    open: controlledOpen,
+    onOpenChange: controlledOnOpenChange,
+    onTaskUpdated
+}: EditTaskDialogProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+    const onOpenChange = controlledOnOpenChange || setInternalOpen;
+
+    const defaultValues = useMemo(() => ({
+        title: task.title,
+        description: task.description || '',
+        priority: task.priority.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+        estimate: task.estimate.value,
+        estimateUnit: task.estimate.unit as 'hours' | 'days',
+        severity: task.type === 'bug' ? (task as any).severity : undefined,
+        complexity: task.type === 'feature' ? (task as any).complexity : undefined,
+    }), [task.id, task.title, task.description, task.priority, task.estimate, task.type]);
 
     const {
         register,
         handleSubmit,
         reset,
         setValue,
-        watch,
         formState: { errors },
-    } = useForm<EditTaskFormInput>({
+    } = useForm<EditTaskFormData>({
         resolver: zodResolver(editTaskSchema),
-        defaultValues: {
-            title: task.title,
-            description: task.description || '',
-            priority: task.priority.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
-            estimate: task.estimate.value,
-            estimateUnit: task.estimate.unit as 'hours' | 'days',
-            severity: task.type === 'bug' ? (task as any).severity : undefined,
-            complexity: task.type === 'feature' ? (task as any).complexity : undefined,
-        },
+        defaultValues,
     });
 
     const taskType = task.type;
-    const estimateUnit = watch('estimateUnit');
 
-    // Reset form when task changes
     useEffect(() => {
-        reset({
-            title: task.title,
-            description: task.description || '',
-            priority: task.priority.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
-            estimate: task.estimate.value,
-            estimateUnit: task.estimate.unit as 'hours' | 'days',
-            severity: task.type === 'bug' ? (task as any).severity : undefined,
-            complexity: task.type === 'feature' ? (task as any).complexity : undefined,
-        });
-    }, [task, reset]);
+        if (open) {
+            reset({
+                title: task.title,
+                description: task.description || '',
+                priority: task.priority.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+                estimate: task.estimate.value,
+                estimateUnit: task.estimate.unit as 'hours' | 'days',
+                severity: task.type === 'bug' ? (task as any).severity : undefined,
+                complexity: task.type === 'feature' ? (task as any).complexity : undefined,
+            });
+        }
+    }, [open, task, reset]);
 
-    const onSubmit = async (data: EditTaskFormInput) => {
+    const onSubmit = async (data: EditTaskFormData) => {
         setIsLoading(true);
         setError(null);
 
         try {
             const result = await updateTaskAction({
                 taskId: task.id,
-                columnId: task.columnId, // ✅ Add this - required by the server action
+                columnId: task.columnId,
                 title: data.title,
                 description: data.description || '',
                 priority: data.priority,
@@ -116,7 +125,6 @@ export function EditTaskDialog({ task, trigger, onTaskUpdated }: EditTaskDialogP
                 return;
             }
 
-            // Convert DTO back to TaskData
             const updatedTask: TaskData = {
                 id: result.data.id,
                 title: result.data.title,
@@ -137,7 +145,7 @@ export function EditTaskDialog({ task, trigger, onTaskUpdated }: EditTaskDialogP
                 onTaskUpdated(updatedTask);
             }
 
-            setOpen(false);
+            onOpenChange(false);
         } catch (err) {
             setError('An unexpected error occurred. Please try again.');
         } finally {
@@ -150,19 +158,11 @@ export function EditTaskDialog({ task, trigger, onTaskUpdated }: EditTaskDialogP
             reset();
             setError(null);
         }
-        setOpen(newOpen);
+        onOpenChange(newOpen);
     };
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogTrigger asChild>
-                {trigger || (
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <Pencil className="h-4 w-4" />
-                        <span className="sr-only">Edit task</span>
-                    </Button>
-                )}
-            </DialogTrigger>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Edit Task</DialogTitle>
@@ -277,7 +277,6 @@ export function EditTaskDialog({ task, trigger, onTaskUpdated }: EditTaskDialogP
                             </FieldGroup>
                         </div>
 
-                        {/* Task-type specific fields */}
                         {taskType === 'bug' && (
                             <FieldGroup>
                                 <Field>
@@ -332,7 +331,7 @@ export function EditTaskDialog({ task, trigger, onTaskUpdated }: EditTaskDialogP
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={() => setOpen(false)}
+                            onClick={() => onOpenChange(false)}
                             disabled={isLoading}
                         >
                             Cancel

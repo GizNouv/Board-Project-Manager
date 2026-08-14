@@ -298,3 +298,57 @@ export async function updateBoardAction(input: UpdateBoardInput): Promise<Action
     };
   }
 }
+
+// ============== DELETE BOARD SCHEMA ==============
+
+const deleteBoardSchema = z.object({
+  boardId: z.string().min(1, 'Board ID is required'),
+});
+
+export type DeleteBoardInput = z.infer<typeof deleteBoardSchema>;
+
+// ============== DELETE BOARD ACTION ==============
+
+export async function deleteBoardAction(input: DeleteBoardInput): Promise<ActionResult<void>> {
+  console.log('🔵 deleteBoardAction called');
+  console.log('  input:', input);
+
+  try {
+    const validationResult = deleteBoardSchema.safeParse(input);
+    if (!validationResult.success) {
+      const firstError = validationResult.error.issues[0];
+      return {
+        success: false,
+        message: firstError.message,
+      };
+    }
+
+    const { boardId } = validationResult.data;
+
+    const boardRepository = new PrismaBoardRepository();
+    const columnRepository = new PrismaColumnRepository();
+    const boardService = new BoardApplicationService(boardRepository, columnRepository);
+
+    const result = await boardService.deleteBoard(boardId);
+
+    if (!result.isSuccess()) {
+      return {
+        success: false,
+        message: result.error.message,
+      };
+    }
+
+    revalidatePath('/boards');
+
+    return {
+      success: true,
+      data: undefined,
+    };
+  } catch (error) {
+    console.error('❌ deleteBoardAction error:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'An unexpected error occurred while deleting the board',
+    };
+  }
+}

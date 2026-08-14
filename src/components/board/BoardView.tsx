@@ -47,7 +47,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
   const setColumns = useBoardStore((state) => state.setColumns);
   const setActiveColumn = useBoardStore((state) => state.setActiveColumn);
   const setActiveTask = useBoardStore((state) => state.setActiveTask);
-    const setMousePosition = useBoardStore((state) => state.setMousePosition);
+  const setMousePosition = useBoardStore((state) => state.setMousePosition);
   const setBoardId = useBoardStore((state) => state.setBoardId);
 
   // Safe initialization: only initialize on boardId change or first mount
@@ -129,7 +129,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
     useSensor(KeyboardSensor)
   );
 
-    // ========== HANDLE TASK CREATED CALLBACK ==========
+  // ========== HANDLE TASK CREATED CALLBACK ==========
   // Migrated to useBoardLogic - Step 4
 
   // ========== HANDLE TASK UPDATED CALLBACK ==========
@@ -155,6 +155,18 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
     });
   }, []);
 
+  // ========== HANDLE TASK DELETED CALLBACK ==========
+  const handleTaskDeleted = useCallback((taskId: string) => {
+    console.log('[BoardView] Task deleted, removing from state:', taskId);
+
+    setColumns(prevColumns => {
+      return prevColumns.map(column => ({
+        ...column,
+        tasks: column.tasks.filter(task => task.id !== taskId),
+      }));
+    });
+  }, []);
+
   // ========== HANDLE COLUMN UPDATED CALLBACK ==========
   const handleColumnUpdated = useCallback((updatedColumn: ColumnData) => {
     console.log('[BoardView] Column updated, updating state:', updatedColumn);
@@ -169,6 +181,15 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
         }
         return column;
       });
+    });
+  }, []);
+
+  // ========== HANDLE COLUMN DELETED CALLBACK ==========
+  const handleColumnDeleted = useCallback((columnId: string) => {
+    console.log('[BoardView] Column deleted, removing from state:', columnId);
+
+    setColumns(prevColumns => {
+      return prevColumns.filter(column => column.id !== columnId);
     });
   }, []);
 
@@ -711,7 +732,9 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
                 boardId={boardId}
                 onTaskCreated={handleTaskCreated}
                 onTaskUpdated={handleTaskUpdated}
+                onTaskDeleted={handleTaskDeleted}
                 onColumnUpdated={handleColumnUpdated}
+                onColumnDeleted={handleColumnDeleted}
               />
             ))}
           </div>

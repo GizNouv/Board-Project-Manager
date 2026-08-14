@@ -374,3 +374,59 @@ export async function moveTaskAction(input: MoveTaskInput): Promise<ActionResult
         };
     }
 }
+
+// ============== DELETE TASK SCHEMA ==============
+
+const deleteTaskSchema = z.object({
+  taskId: z.string().min(1, 'Task ID is required'),
+  columnId: z.string().min(1, 'Column ID is required'),
+});
+
+export type DeleteTaskInput = z.infer<typeof deleteTaskSchema>;
+
+// ============== DELETE TASK ACTION ==============
+
+export async function deleteTaskAction(input: DeleteTaskInput): Promise<ActionResult<void>> {
+  console.log('🔵 deleteTaskAction called');
+  console.log('  input:', input);
+
+  try {
+    const validationResult = deleteTaskSchema.safeParse(input);
+    if (!validationResult.success) {
+      const firstError = validationResult.error.issues[0];
+      return {
+        success: false,
+        message: firstError.message,
+      };
+    }
+
+    const { taskId, columnId } = validationResult.data;
+
+    const taskRepository = new PrismaTaskRepository();
+    const columnRepository = new PrismaColumnRepository();
+    const boardRepository = new PrismaBoardRepository();
+    const taskService = new TaskApplicationService(taskRepository, columnRepository, boardRepository);
+
+    const result = await taskService.deleteTask(taskId);
+
+    if (!result.isSuccess()) {
+      return {
+        success: false,
+        message: result.error.message,
+      };
+    }
+
+    revalidatePath(`/boards/${columnId}`);
+
+    return {
+      success: true,
+      data: undefined,
+    };
+  } catch (error) {
+    console.error('❌ deleteTaskAction error:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'An unexpected error occurred while deleting the task',
+    };
+  }
+}

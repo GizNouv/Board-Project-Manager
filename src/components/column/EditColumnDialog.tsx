@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Pencil } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -13,7 +13,6 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog';
 import { Field, FieldLabel, FieldContent, FieldError, FieldGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -33,19 +32,29 @@ type EditColumnFormData = z.infer<typeof editColumnSchema>;
 interface EditColumnDialogProps {
     column: ColumnData;
     boardId: string;
-    trigger?: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
     onColumnUpdated?: (column: ColumnData) => void;
 }
 
 export function EditColumnDialog({
     column,
     boardId,
-    trigger,
+    open: controlledOpen,
+    onOpenChange: controlledOnOpenChange,
     onColumnUpdated
 }: EditColumnDialogProps) {
-    const [open, setOpen] = useState(false);
+    const [internalOpen, setInternalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+    const onOpenChange = controlledOnOpenChange || setInternalOpen;
+
+    // Stabilize default values with useMemo
+    const defaultValues = useMemo(() => ({
+        title: column.title,
+    }), [column.title]);
 
     const {
         register,
@@ -54,17 +63,15 @@ export function EditColumnDialog({
         formState: { errors },
     } = useForm<EditColumnFormData>({
         resolver: zodResolver(editColumnSchema),
-        defaultValues: {
-            title: column.title,
-        },
+        defaultValues,
     });
 
-    // Reset form when column changes
+    // Reset form when dialog opens or column changes
     useEffect(() => {
-        reset({
-            title: column.title,
-        });
-    }, [column, reset]);
+        if (open) {
+            reset({ title: column.title });
+        }
+    }, [open, column.title, reset]);
 
     const onSubmit = async (data: EditColumnFormData) => {
         setIsLoading(true);
@@ -82,20 +89,19 @@ export function EditColumnDialog({
                 return;
             }
 
-            // Convert DTO back to ColumnData
             const updatedColumn: ColumnData = {
                 id: result.data.id,
                 title: result.data.title,
                 boardId: result.data.boardId,
                 order: result.data.order,
-                tasks: column.tasks, // Preserve existing tasks
+                tasks: column.tasks,
             };
 
             if (onColumnUpdated) {
                 onColumnUpdated(updatedColumn);
             }
 
-            setOpen(false);
+            onOpenChange(false);
         } catch (err) {
             setError('An unexpected error occurred. Please try again.');
         } finally {
@@ -108,32 +114,19 @@ export function EditColumnDialog({
             reset();
             setError(null);
         }
-        setOpen(newOpen);
+        onOpenChange(newOpen);
     };
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogTrigger asChild>
-                {trigger || (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <Pencil className="h-3.5 w-3.5" />
-                        <span className="sr-only">Edit column</span>
-                    </Button>
-                )}
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Edit Column</DialogTitle>
                     <DialogDescription>
                         Update the column name below.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit(onSubmit)} onClick={(e) => e.stopPropagation()}>
+                <form onSubmit={handleSubmit(onSubmit)}>
                     <div className="space-y-4 py-4">
                         {error && (
                             <Alert variant="destructive">
@@ -152,7 +145,6 @@ export function EditColumnDialog({
                                         disabled={isLoading}
                                         aria-invalid={!!errors.title}
                                         {...register('title')}
-                                        onClick={(e) => e.stopPropagation()}
                                     />
                                 </FieldContent>
                                 {errors.title && <FieldError>{errors.title.message}</FieldError>}
@@ -163,15 +155,12 @@ export function EditColumnDialog({
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setOpen(false);
-                            }}
+                            onClick={() => onOpenChange(false)}
                             disabled={isLoading}
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isLoading} onClick={(e) => e.stopPropagation()}>
+                        <Button type="submit" disabled={isLoading}>
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isLoading ? 'Saving...' : 'Save Changes'}
                         </Button>

@@ -10,12 +10,12 @@ interface SortableTaskProps {
     task: TaskData;
     columnId: string;
     onTaskUpdated?: (task: TaskData) => void;
+    onTaskDeleted?: (taskId: string) => void;
 }
 
-export function SortableTask({ task, columnId, onTaskUpdated }: SortableTaskProps) {
+export function SortableTask({ task, columnId, onTaskUpdated, onTaskDeleted }: SortableTaskProps) {
     const sortableId = `${columnId}-task-${task.id}`;
 
-    // Log when SortableTask renders
     useEffect(() => {
         console.log(`  🔹 SortableTask render: ${sortableId}`);
     }, [sortableId]);
@@ -50,7 +50,12 @@ export function SortableTask({ task, columnId, onTaskUpdated }: SortableTaskProp
             {...attributes}
             {...listeners}
         >
-            <TaskCard task={task} onTaskUpdated={onTaskUpdated} />
+            <TaskCard
+                task={task}
+                columnId={columnId}
+                onTaskUpdated={onTaskUpdated}
+                onTaskDeleted={onTaskDeleted}
+            />
         </div>
     );
 }

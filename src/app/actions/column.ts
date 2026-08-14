@@ -98,3 +98,58 @@ export async function createColumnAction(input: CreateColumnInput): Promise<Acti
         };
     }
 }
+
+// ============== DELETE COLUMN SCHEMA ==============
+
+const deleteColumnSchema = z.object({
+    columnId: z.string().min(1, 'Column ID is required'),
+    boardId: z.string().min(1, 'Board ID is required'),
+});
+
+export type DeleteColumnInput = z.infer<typeof deleteColumnSchema>;
+
+// ============== DELETE COLUMN ACTION ==============
+
+export async function deleteColumnAction(input: DeleteColumnInput): Promise<ActionResult<void>> {
+    console.log('🔵 deleteColumnAction called');
+    console.log('  input:', input);
+
+    try {
+        const validationResult = deleteColumnSchema.safeParse(input);
+        if (!validationResult.success) {
+            const firstError = validationResult.error.issues[0];
+            return {
+                success: false,
+                message: firstError.message,
+            };
+        }
+
+        const { columnId, boardId } = validationResult.data;
+
+        const boardRepository = new PrismaBoardRepository();
+        const columnRepository = new PrismaColumnRepository();
+        const boardService = new BoardApplicationService(boardRepository, columnRepository);
+
+        const result = await boardService.deleteColumn(columnId);
+
+        if (!result.isSuccess()) {
+            return {
+                success: false,
+                message: result.error.message,
+            };
+        }
+
+        revalidatePath(`/boards/${boardId}`);
+
+        return {
+            success: true,
+            data: undefined,
+        };
+    } catch (error) {
+        console.error('❌ deleteColumnAction error:', error);
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : 'An unexpected error occurred while deleting the column',
+        };
+    }
+}

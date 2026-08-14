@@ -1,14 +1,17 @@
 'use client';
 
+import { useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableTask } from './SortableTask';
 import { CreateTaskDialog } from '@/components/task/CreateTaskDialog';
 import { EditColumnDialog } from '@/components/column/EditColumnDialog';
+import { ColumnMenu } from './ColumnMenu';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { ColumnData, TaskData } from '@/types/kanban';
+import { deleteColumnAction } from '@/app/actions/column';
 import { useEffect } from 'react';
 
 interface ColumnViewProps {
@@ -17,7 +20,9 @@ interface ColumnViewProps {
     className?: string;
     onTaskCreated?: (task: TaskData) => void;
     onTaskUpdated?: (task: TaskData) => void;
+    onTaskDeleted?: (taskId: string) => void;
     onColumnUpdated?: (column: ColumnData) => void;
+    onColumnDeleted?: (columnId: string) => void;
 }
 
 export function ColumnView({
@@ -26,8 +31,13 @@ export function ColumnView({
     className,
     onTaskCreated,
     onTaskUpdated,
-    onColumnUpdated
+    onTaskDeleted,
+    onColumnUpdated,
+    onColumnDeleted
 }: ColumnViewProps) {
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+
     const tasks = column.tasks;
     const taskCount = tasks.length;
 
@@ -59,6 +69,21 @@ export function ColumnView({
         },
     });
 
+    const handleDelete = async () => {
+        setIsDeleting(true);
+        try {
+            const result = await deleteColumnAction({
+                columnId: column.id,
+                boardId: boardId,
+            });
+            if (result.success && onColumnDeleted) {
+                onColumnDeleted(column.id);
+            }
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     return (
         <Card
             ref={setDroppableRef}
@@ -70,23 +95,11 @@ export function ColumnView({
                         <CardTitle className="text-sm font-medium truncate">
                             {column.title}
                         </CardTitle>
-                        {/* Edit button - isolated from drag */}
-                        <EditColumnDialog
+                        <ColumnMenu
                             column={column}
-                            boardId={boardId}
-                            onColumnUpdated={onColumnUpdated}
-                            trigger={
-                                <button
-                                    className="h-5 w-5 shrink-0 rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                                    aria-label="Edit column"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                        <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                    </svg>
-                                </button>
-                            }
+                            onEdit={() => setEditDialogOpen(true)}
+                            onDelete={handleDelete}
+                            isDeleting={isDeleting}
                         />
                     </div>
                     <CardDescription>
@@ -118,6 +131,7 @@ export function ColumnView({
                                     task={task}
                                     columnId={column.id}
                                     onTaskUpdated={onTaskUpdated}
+                                    onTaskDeleted={onTaskDeleted}
                                 />
                             ))}
                         </SortableContext>
@@ -139,6 +153,14 @@ export function ColumnView({
                     </>
                 )}
             </CardContent>
+
+            <EditColumnDialog
+                column={column}
+                boardId={boardId}
+                open={editDialogOpen}
+                onOpenChange={setEditDialogOpen}
+                onColumnUpdated={onColumnUpdated}
+            />
         </Card>
     );
 }

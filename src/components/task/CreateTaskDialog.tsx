@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -40,8 +40,8 @@ const createTaskSchema = z.object({
     estimateUnit: z.enum(['hours', 'days']),
 });
 
-type CreateTaskFormData = z.infer<typeof createTaskSchema>;
-type CreateTaskFormInput = z.input<typeof createTaskSchema>;
+// Use z.input for the form type (matches the schema with optional fields)
+type CreateTaskFormData = z.input<typeof createTaskSchema>;
 
 interface CreateTaskDialogProps {
     columnId: string;
@@ -54,11 +54,13 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    console.log('[CreateTaskDialog] render:', {
-        columnId,
-        hasOnTaskCreated: typeof onTaskCreated === 'function',
-        open,
-    });
+    const defaultValues = useMemo(() => ({
+        title: '',
+        description: '',
+        priority: 'MEDIUM' as const,
+        estimate: 1,
+        estimateUnit: 'hours' as const,
+    }), []);
 
     const {
         register,
@@ -66,22 +68,12 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
         reset,
         setValue,
         formState: { errors },
-    } = useForm<CreateTaskFormInput>({
+    } = useForm<CreateTaskFormData>({
         resolver: zodResolver(createTaskSchema),
-        defaultValues: {
-            title: '',
-            description: '',
-            priority: 'MEDIUM',
-            estimate: 1,
-            estimateUnit: 'hours',
-        },
+        defaultValues,
     });
 
-    const onSubmit = async (data: CreateTaskFormInput) => {
-        console.log('========== CREATE TASK DEBUG: ACTION CALL ==========');
-        console.log('[CreateTaskDialog] form data:', data);
-        console.log('[CreateTaskDialog] columnId prop:', columnId);
-
+    const onSubmit = async (data: CreateTaskFormData) => {
         setIsLoading(true);
         setError(null);
 
@@ -95,17 +87,10 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
                 columnId,
             });
 
-            console.log('========== CREATE TASK DEBUG: ACTION RESULT ==========');
-            console.log('[CreateTaskDialog] result:', result);
-            console.log('[CreateTaskDialog] result JSON:', JSON.stringify(result, null, 2));
-
             if (!result.success) {
-                console.log('[CreateTaskDialog] ❌ Action failed:', result.message);
                 setError(result.message);
                 return;
             }
-
-            console.log('[CreateTaskDialog] ✅ Task created successfully');
 
             const taskData: TaskData = {
                 id: result.data.id,
@@ -123,23 +108,13 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
                 assigneeId: result.data.assigneeId,
             };
 
-            console.log('========== CREATE TASK DEBUG: CALLBACK ==========');
-            console.log('[CreateTaskDialog] onTaskCreated type:', typeof onTaskCreated);
-            console.log('[CreateTaskDialog] task being passed:', taskData);
-            console.log('[CreateTaskDialog] task being passed JSON:', JSON.stringify(taskData, null, 2));
-
             if (onTaskCreated) {
-                console.log('>>> [CreateTaskDialog] CALLING onTaskCreated NOW');
                 onTaskCreated(taskData);
-                console.log('<<< [CreateTaskDialog] onTaskCreated RETURNED');
-            } else {
-                console.error('!!! [CreateTaskDialog] onTaskCreated IS UNDEFINED !!!');
             }
 
             setOpen(false);
             reset();
         } catch (err) {
-            console.error('[CreateTaskDialog] ❌ Unexpected error:', err);
             setError('An unexpected error occurred. Please try again.');
         } finally {
             setIsLoading(false);

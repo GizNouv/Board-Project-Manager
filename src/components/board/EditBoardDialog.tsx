@@ -36,17 +36,24 @@ interface EditBoardDialogProps {
         title: string;
     };
     trigger?: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
     onBoardUpdated?: (board: { id: string; title: string }) => void;
 }
 
 export function EditBoardDialog({
     board,
     trigger,
+    open: controlledOpen,
+    onOpenChange: controlledOnOpenChange,
     onBoardUpdated
 }: EditBoardDialogProps) {
-    const [open, setOpen] = useState(false);
+    const [internalOpen, setInternalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+    const onOpenChange = controlledOnOpenChange || setInternalOpen;
 
     const {
         register,
@@ -88,7 +95,7 @@ export function EditBoardDialog({
                 });
             }
 
-            setOpen(false);
+            onOpenChange(false);
         } catch (err) {
             setError('An unexpected error occurred. Please try again.');
         } finally {
@@ -101,7 +108,7 @@ export function EditBoardDialog({
             reset();
             setError(null);
         }
-        setOpen(newOpen);
+        onOpenChange(newOpen);
     };
 
     return (
@@ -154,7 +161,7 @@ export function EditBoardDialog({
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={() => setOpen(false)}
+                            onClick={() => onOpenChange(false)}
                             disabled={isLoading}
                         >
                             Cancel

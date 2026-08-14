@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -19,7 +18,8 @@ import {
 import { Field, FieldLabel, FieldContent, FieldError, FieldGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { createColumnAction, type ColumnDTO } from '@/app/actions/column';
+import { createColumnAction } from '@/app/actions/column';
+import { ColumnData } from '@/types/kanban';
 
 const createColumnSchema = z.object({
     title: z.string()
@@ -33,13 +33,24 @@ type CreateColumnFormData = z.infer<typeof createColumnSchema>;
 interface CreateColumnDialogProps {
     boardId: string;
     trigger?: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    onColumnCreated?: (column: ColumnData) => void;
 }
 
-export function CreateColumnDialog({ boardId, trigger }: CreateColumnDialogProps) {
-    const router = useRouter();
-    const [open, setOpen] = useState(false);
+export function CreateColumnDialog({
+    boardId,
+    trigger,
+    open: controlledOpen,
+    onOpenChange: controlledOnOpenChange,
+    onColumnCreated,
+}: CreateColumnDialogProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+    const onOpenChange = controlledOnOpenChange || setInternalOpen;
 
     const {
         register,
@@ -68,9 +79,20 @@ export function CreateColumnDialog({ boardId, trigger }: CreateColumnDialogProps
                 return;
             }
 
-            setOpen(false);
+            const newColumn: ColumnData = {
+                id: result.data.id,
+                title: result.data.title,
+                boardId: result.data.boardId,
+                order: result.data.order,
+                tasks: [],
+            };
+
+            if (onColumnCreated) {
+                onColumnCreated(newColumn);
+            }
+
+            onOpenChange(false);
             reset();
-            router.refresh();
         } catch (err) {
             setError('An unexpected error occurred. Please try again.');
         } finally {
@@ -83,7 +105,7 @@ export function CreateColumnDialog({ boardId, trigger }: CreateColumnDialogProps
             reset();
             setError(null);
         }
-        setOpen(newOpen);
+        onOpenChange(newOpen);
     };
 
     return (
@@ -100,17 +122,16 @@ export function CreateColumnDialog({ boardId, trigger }: CreateColumnDialogProps
                 <DialogHeader>
                     <DialogTitle>Create New Column</DialogTitle>
                     <DialogDescription>
-                        Enter a name for your new column. You can customize it later.
+                        Enter a name for your new column.
                     </DialogDescription>
                 </DialogHeader>
+                {error && (
+                    <Alert variant="destructive" className="mb-4">
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
                 <form onSubmit={handleSubmit(onSubmit)}>
                     <div className="space-y-4 py-4">
-                        {error && (
-                            <Alert variant="destructive">
-                                <AlertDescription>{error}</AlertDescription>
-                            </Alert>
-                        )}
-
                         <FieldGroup>
                             <Field>
                                 <FieldLabel htmlFor="title">Column Name</FieldLabel>
@@ -132,7 +153,7 @@ export function CreateColumnDialog({ boardId, trigger }: CreateColumnDialogProps
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={() => setOpen(false)}
+                            onClick={() => onOpenChange(false)}
                             disabled={isLoading}
                         >
                             Cancel
