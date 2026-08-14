@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import {
   DndContext,
   rectIntersection,
@@ -22,6 +22,8 @@ import { SortableColumn } from './SortableColumn';
 import { ColumnData, TaskData } from '@/types/kanban';
 import { reorderColumnsAction } from '@/app/actions/board';
 import { reorderTasksAction, moveTaskAction } from '@/app/actions/task';
+import { useBoardStore } from '@/stores/boardStore';
+import { useBoardLogic } from '@/hooks/useBoardLogic';
 
 interface BoardViewProps {
   board: {
@@ -33,12 +35,44 @@ interface BoardViewProps {
 }
 
 export function BoardView({ board: initialBoard, className }: BoardViewProps) {
-  const [columns, setColumns] = useState<ColumnData[]>(initialBoard.columns);
-  const [activeColumn, setActiveColumn] = useState<ColumnData | null>(null);
-  const [activeTask, setActiveTask] = useState<TaskData | null>(null);
-  const updateCounterRef = useRef(0);
-  const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
   const boardId = initialBoard.id;
+
+  // Zustand store state
+  const columns = useBoardStore((state) => state.columns);
+  const activeColumn = useBoardStore((state) => state.activeColumn);
+  const activeTask = useBoardStore((state) => state.activeTask);
+  const mousePosition = useBoardStore((state) => state.mousePosition);
+
+  // Zustand store setters
+  const setColumns = useBoardStore((state) => state.setColumns);
+  const setActiveColumn = useBoardStore((state) => state.setActiveColumn);
+  const setActiveTask = useBoardStore((state) => state.setActiveTask);
+    const setMousePosition = useBoardStore((state) => state.setMousePosition);
+  const setBoardId = useBoardStore((state) => state.setBoardId);
+
+  // Safe initialization: only initialize on boardId change or first mount
+  // Avoid overwriting optimistic state on ordinary re-renders
+  useEffect(() => {
+    const currentBoardId = useBoardStore.getState().boardId;
+    const currentColumns = useBoardStore.getState().columns;
+
+    if (currentBoardId !== boardId) {
+      // Board changed — safe to reset all state
+      setColumns(initialBoard.columns);
+      setBoardId(boardId);
+      setActiveColumn(null);
+      setActiveTask(null);
+      setMousePosition(null);
+    } else if (currentColumns.length === 0) {
+      // First mount — initialize from server data
+      setColumns(initialBoard.columns);
+      setBoardId(boardId);
+    }
+    // If boardId matches AND columns exist → keep optimistic state, do NOT overwrite
+  }, [boardId, initialBoard.columns, setColumns, setBoardId, setActiveColumn, setActiveTask, setMousePosition]);
+
+  // Migrate handleTaskCreated from BoardView to useBoardLogic hook
+  const { handleTaskCreated } = useBoardLogic(boardId, initialBoard.columns);
 
   // Log initial state
   useEffect(() => {
@@ -95,25 +129,8 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
     useSensor(KeyboardSensor)
   );
 
-  // ========== HANDLE TASK CREATED CALLBACK ==========
-  const handleTaskCreated = useCallback((newTask: TaskData) => {
-    console.log('[BoardView] Task created, updating state:', newTask);
-
-    setColumns(prevColumns => {
-      return prevColumns.map(column => {
-        if (column.id === newTask.columnId) {
-          if (column.tasks.some(task => task.id === newTask.id)) {
-            return column;
-          }
-          return {
-            ...column,
-            tasks: [...column.tasks, newTask],
-          };
-        }
-        return column;
-      });
-    });
-  }, []);
+    // ========== HANDLE TASK CREATED CALLBACK ==========
+  // Migrated to useBoardLogic - Step 4
 
   // ========== HANDLE TASK UPDATED CALLBACK ==========
   const handleTaskUpdated = useCallback((updatedTask: TaskData) => {
