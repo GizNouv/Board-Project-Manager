@@ -32,9 +32,10 @@ interface BoardViewProps {
     columns: ColumnData[];
   };
   className?: string;
+  onColumnCreated?: (column: ColumnData) => void;  // ✅ Add this
 }
 
-export function BoardView({ board: initialBoard, className }: BoardViewProps) {
+export function BoardView({ board: initialBoard, className, onColumnCreated }: BoardViewProps) {
   const boardId = initialBoard.id;
 
   // Zustand store state
@@ -735,6 +736,7 @@ export function BoardView({ board: initialBoard, className }: BoardViewProps) {
                 onTaskDeleted={handleTaskDeleted}
                 onColumnUpdated={handleColumnUpdated}
                 onColumnDeleted={handleColumnDeleted}
+                onColumnCreated={onColumnCreated}  // ✅ Pass through
               />
             ))}
           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -63,6 +63,13 @@ export function CreateColumnDialog({
             title: '',
         },
     });
+
+    // ✅ FIX: Reset form when dialog opens
+    useEffect(() => {
+        if (open) {
+            reset({ title: '' });
+        }
+    }, [open]);
 
     const onSubmit = async (data: CreateColumnFormData) => {
         setIsLoading(true);

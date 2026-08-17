@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Plus } from 'lucide-react';
@@ -34,14 +34,13 @@ const createTaskSchema = z.object({
         .min(1, 'Task title is required')
         .max(200, 'Task title must not exceed 200 characters')
         .trim(),
-    description: z.string().optional().default(''),
+    description: z.string().optional(),
     priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
     estimate: z.number().min(0, 'Estimate must be a positive number'),
     estimateUnit: z.enum(['hours', 'days']),
 });
 
-// Use z.input for the form type (matches the schema with optional fields)
-type CreateTaskFormData = z.input<typeof createTaskSchema>;
+type CreateTaskFormData = z.infer<typeof createTaskSchema>;
 
 interface CreateTaskDialogProps {
     columnId: string;
@@ -54,23 +53,21 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const defaultValues = useMemo(() => ({
-        title: '',
-        description: '',
-        priority: 'MEDIUM' as const,
-        estimate: 1,
-        estimateUnit: 'hours' as const,
-    }), []);
-
     const {
         register,
         handleSubmit,
         reset,
-        setValue,
+        control,
         formState: { errors },
     } = useForm<CreateTaskFormData>({
         resolver: zodResolver(createTaskSchema),
-        defaultValues,
+        defaultValues: {
+            title: '',
+            description: '',
+            priority: 'MEDIUM',
+            estimate: 1,
+            estimateUnit: 'hours',
+        },
     });
 
     const onSubmit = async (data: CreateTaskFormData) => {
@@ -139,22 +136,22 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md" data-no-dnd="true">
                 <DialogHeader>
                     <DialogTitle>Create New Task</DialogTitle>
                     <DialogDescription>
                         Add a new task to this column. Fill in the details below.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit(onSubmit)}>
-                    <div className="space-y-4 py-4">
+                <form onSubmit={handleSubmit(onSubmit)} data-no-dnd="true">
+                    <div className="space-y-4 py-4" data-no-dnd="true">
                         {error && (
                             <Alert variant="destructive">
                                 <AlertDescription>{error}</AlertDescription>
                             </Alert>
                         )}
 
-                        <FieldGroup>
+                        <FieldGroup data-no-dnd="true">
                             <Field>
                                 <FieldLabel htmlFor="title">Title *</FieldLabel>
                                 <FieldContent>
@@ -165,13 +162,17 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
                                         disabled={isLoading}
                                         aria-invalid={!!errors.title}
                                         {...register('title')}
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                        onKeyDown={(e) => e.stopPropagation()}
+                                        data-no-dnd="true"
                                     />
                                 </FieldContent>
                                 {errors.title && <FieldError>{errors.title.message}</FieldError>}
                             </Field>
                         </FieldGroup>
 
-                        <FieldGroup>
+                        <FieldGroup data-no-dnd="true">
                             <Field>
                                 <FieldLabel htmlFor="description">Description</FieldLabel>
                                 <FieldContent>
@@ -181,38 +182,52 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
                                         disabled={isLoading}
                                         aria-invalid={!!errors.description}
                                         {...register('description')}
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                        onKeyDown={(e) => e.stopPropagation()}
+                                        data-no-dnd="true"
                                     />
                                 </FieldContent>
                                 {errors.description && <FieldError>{errors.description.message}</FieldError>}
                             </Field>
                         </FieldGroup>
 
-                        <FieldGroup>
+                        <FieldGroup data-no-dnd="true">
                             <Field>
                                 <FieldLabel htmlFor="priority">Priority</FieldLabel>
                                 <FieldContent>
-                                    <Select
-                                        disabled={isLoading}
-                                        defaultValue="MEDIUM"
-                                        onValueChange={(value) => setValue('priority', value as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL')}
-                                    >
-                                        <SelectTrigger id="priority">
-                                            <SelectValue placeholder="Select priority" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="LOW">Low</SelectItem>
-                                            <SelectItem value="MEDIUM">Medium</SelectItem>
-                                            <SelectItem value="HIGH">High</SelectItem>
-                                            <SelectItem value="CRITICAL">Critical</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <Controller
+                                        name="priority"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Select
+                                                disabled={isLoading}
+                                                value={field.value}
+                                                onValueChange={field.onChange}
+                                            >
+                                                <SelectTrigger
+                                                    id="priority"
+                                                    // onPointerDown={(e) => e.stopPropagation()}
+                                                    data-no-dnd="true"
+                                                >
+                                                    <SelectValue placeholder="Select priority" />
+                                                </SelectTrigger>
+                                                <SelectContent data-no-dnd="true">
+                                                    <SelectItem value="LOW">Low</SelectItem>
+                                                    <SelectItem value="MEDIUM">Medium</SelectItem>
+                                                    <SelectItem value="HIGH">High</SelectItem>
+                                                    <SelectItem value="CRITICAL">Critical</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
                                 </FieldContent>
                                 {errors.priority && <FieldError>{errors.priority.message}</FieldError>}
                             </Field>
                         </FieldGroup>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <FieldGroup>
+                        <div className="grid grid-cols-2 gap-4" data-no-dnd="true">
+                            <FieldGroup data-no-dnd="true">
                                 <Field>
                                     <FieldLabel htmlFor="estimate">Estimate</FieldLabel>
                                     <FieldContent>
@@ -224,29 +239,43 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
                                             disabled={isLoading}
                                             aria-invalid={!!errors.estimate}
                                             {...register('estimate', { valueAsNumber: true })}
+                                            onPointerDown={(e) => e.stopPropagation()}
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                            onKeyDown={(e) => e.stopPropagation()}
+                                            data-no-dnd="true"
                                         />
                                     </FieldContent>
                                     {errors.estimate && <FieldError>{errors.estimate.message}</FieldError>}
                                 </Field>
                             </FieldGroup>
 
-                            <FieldGroup>
+                            <FieldGroup data-no-dnd="true">
                                 <Field>
                                     <FieldLabel htmlFor="estimateUnit">Unit</FieldLabel>
                                     <FieldContent>
-                                        <Select
-                                            disabled={isLoading}
-                                            defaultValue="hours"
-                                            onValueChange={(value) => setValue('estimateUnit', value as 'hours' | 'days')}
-                                        >
-                                            <SelectTrigger id="estimateUnit">
-                                                <SelectValue placeholder="Select unit" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="hours">Hours</SelectItem>
-                                                <SelectItem value="days">Days</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                        <Controller
+                                            name="estimateUnit"
+                                            control={control}
+                                            render={({ field }) => (
+                                                <Select
+                                                    disabled={isLoading}
+                                                    value={field.value}
+                                                    onValueChange={field.onChange}
+                                                >
+                                                    <SelectTrigger
+                                                        id="estimateUnit"
+                                                        onPointerDown={(e) => e.stopPropagation()}
+                                                        data-no-dnd="true"
+                                                    >
+                                                        <SelectValue placeholder="Select unit" />
+                                                    </SelectTrigger>
+                                                    <SelectContent data-no-dnd="true">
+                                                        <SelectItem value="hours">Hours</SelectItem>
+                                                        <SelectItem value="days">Days</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                        />
                                     </FieldContent>
                                     {errors.estimateUnit && <FieldError>{errors.estimateUnit.message}</FieldError>}
                                 </Field>

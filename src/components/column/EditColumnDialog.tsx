@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -47,14 +47,10 @@ export function EditColumnDialog({
     const [internalOpen, setInternalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const hasInitializedRef = useRef(false);
 
     const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
     const onOpenChange = controlledOnOpenChange || setInternalOpen;
-
-    // Stabilize default values with useMemo
-    const defaultValues = useMemo(() => ({
-        title: column.title,
-    }), [column.title]);
 
     const {
         register,
@@ -63,15 +59,17 @@ export function EditColumnDialog({
         formState: { errors },
     } = useForm<EditColumnFormData>({
         resolver: zodResolver(editColumnSchema),
-        defaultValues,
+        defaultValues: {
+            title: column.title,
+        },
     });
 
-    // Reset form when dialog opens or column changes
+    // ✅ FIX: Only reset when dialog opens, NOT on every render
     useEffect(() => {
         if (open) {
             reset({ title: column.title });
         }
-    }, [open, column.title, reset]);
+    }, [open]); // ✅ Removed column.title from dependencies
 
     const onSubmit = async (data: EditColumnFormData) => {
         setIsLoading(true);
@@ -126,7 +124,7 @@ export function EditColumnDialog({
                         Update the column name below.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit(onSubmit)}>
+                <form onSubmit={handleSubmit(onSubmit)} onPointerDown={(e) => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                     <div className="space-y-4 py-4">
                         {error && (
                             <Alert variant="destructive">

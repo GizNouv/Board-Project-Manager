@@ -23,6 +23,7 @@ interface ColumnViewProps {
     onTaskDeleted?: (taskId: string) => void;
     onColumnUpdated?: (column: ColumnData) => void;
     onColumnDeleted?: (columnId: string) => void;
+    onColumnCreated?: (column: ColumnData) => void;  // ✅ Add this prop
 }
 
 export function ColumnView({
@@ -33,7 +34,8 @@ export function ColumnView({
     onTaskUpdated,
     onTaskDeleted,
     onColumnUpdated,
-    onColumnDeleted
+    onColumnDeleted,
+    onColumnCreated,  // ✅ Add this
 }: ColumnViewProps) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);

@@ -15,6 +15,7 @@ interface SortableColumnProps {
   onTaskDeleted?: (taskId: string) => void;
   onColumnUpdated?: (column: ColumnData) => void;
   onColumnDeleted?: (columnId: string) => void;
+  onColumnCreated?: (column: ColumnData) => void;  // ✅ Add this
 }
 
 export function SortableColumn({
@@ -25,6 +26,7 @@ export function SortableColumn({
   onTaskDeleted,
   onColumnUpdated,
   onColumnDeleted,
+  onColumnCreated,  // ✅ Add this
 }: SortableColumnProps) {
   const {
     attributes,
@@ -171,6 +173,7 @@ export function SortableColumn({
           onTaskDeleted={onTaskDeleted}
           onColumnUpdated={onColumnUpdated}
           onColumnDeleted={onColumnDeleted}
+          onColumnCreated={onColumnCreated}  // ✅ Pass through
         />
       </div>
     </div>
