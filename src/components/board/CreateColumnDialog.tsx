@@ -8,6 +8,7 @@ import { Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
+    DialogClose,
     DialogContent,
     DialogDescription,
     DialogFooter,
@@ -157,14 +158,15 @@ export function CreateColumnDialog({
                         </FieldGroup>
                     </div>
                     <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => onOpenChange(false)}
-                            disabled={isLoading}
-                        >
-                            Cancel
-                        </Button>
+                        <DialogClose asChild>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                disabled={isLoading}
+                            >
+                                Cancel
+                            </Button>
+                        </DialogClose>
                         <Button type="submit" disabled={isLoading}>
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isLoading ? 'Creating...' : 'Create Column'}
