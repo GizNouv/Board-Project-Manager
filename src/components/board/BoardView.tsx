@@ -64,11 +64,11 @@ export function BoardView({ board: initialBoard, className, onColumnCreated }: B
       setActiveColumn(null);
       setActiveTask(null);
       setMousePosition(null);
-    } else if (currentColumns.length === 0) {
-      // First mount — initialize from server data
-      setColumns(initialBoard.columns);
-      setBoardId(boardId);
     }
+    // First mount — initialize from server data
+    setColumns(initialBoard.columns);
+    setBoardId(boardId);
+
     // If boardId matches AND columns exist → keep optimistic state, do NOT overwrite
   }, [boardId, initialBoard.columns, setColumns, setBoardId, setActiveColumn, setActiveTask, setMousePosition]);
 

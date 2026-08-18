@@ -39,10 +39,11 @@ export function BoardClient({ board: initialBoard, boardId }: BoardClientProps) 
         // The router will handle navigation
     }, []);
 
-    const hasColumns = board.columns && board.columns.length > 0;
+    const hasColumns = initialBoard.columns && initialBoard.columns.length > 0;
 
     return (
         <div className="space-y-6">
+            <div>status: {hasColumns}</div>
             <BoardHeader
                 title={board.title}
                 boardId={boardId}
