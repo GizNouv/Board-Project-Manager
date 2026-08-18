@@ -43,7 +43,6 @@ export function BoardClient({ board: initialBoard, boardId }: BoardClientProps) 
 
     return (
         <div className="space-y-6">
-            <div>status: {hasColumns}</div>
             <BoardHeader
                 title={board.title}
                 boardId={boardId}
