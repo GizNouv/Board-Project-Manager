@@ -128,4 +128,15 @@
   html {
     @apply font-sans;
   }
+
+  html:has(div[data-state="collapsed"]) #DashboardShell {
+    @apply !max-w-full
+  }
+  html:has(div[data-state="collapsed"]), body:has(div[data-state="expanded"]) {
+    @apply overflow-clip
+  }
+
+  #DashboardShell:has(#boardView) {
+    @apply !pb-0
+  }
 }
