@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableTask } from './SortableTask';
 import { CreateTaskDialog } from '@/components/task/CreateTaskDialog';
@@ -13,6 +13,7 @@ import { Plus } from 'lucide-react';
 import { ColumnData, TaskData } from '@/types/kanban';
 import { deleteColumnAction } from '@/app/actions/column';
 import { useEffect } from 'react';
+import { cn } from '@/lib/utils';
 
 interface ColumnViewProps {
     column: ColumnData;
@@ -89,7 +90,7 @@ export function ColumnView({
     return (
         <Card
             ref={setDroppableRef}
-            className={`${className} ${isOver ? 'ring-2 ring-primary ring-opacity-50' : ''}`}
+            className={cn('max-h-full gap-2 border-border border', className, isOver && 'border-primary')}
         >
             <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -109,60 +110,63 @@ export function ColumnView({
                     </CardDescription>
                 </div>
             </CardHeader>
-            <CardContent className="space-y-2">
-                {taskCount === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-4 text-center">
-                        <p className="text-sm text-muted-foreground">No tasks yet</p>
-                        <CreateTaskDialog
-                            columnId={column.id}
-                            onTaskCreated={onTaskCreated}
-                            trigger={
-                                <Button variant="ghost" size="sm" className="mt-2 text-muted-foreground">
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add Task
-                                </Button>
-                            }
-                        />
-                    </div>
-                ) : (
-                    <>
-                        <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-                            {tasks.slice(0, 5).map((task) => (
-                                <SortableTask
-                                    key={task.id}
-                                    task={task}
-                                    columnId={column.id}
-                                    onTaskUpdated={onTaskUpdated}
-                                    onTaskDeleted={onTaskDeleted}
-                                />
-                            ))}
-                        </SortableContext>
-                        <CreateTaskDialog
-                            columnId={column.id}
-                            onTaskCreated={onTaskCreated}
-                            trigger={
-                                <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground">
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add Task
-                                </Button>
-                            }
-                        />
-                        {taskCount > 5 && (
-                            <p className="text-xs text-muted-foreground text-center">
-                                +{taskCount - 5} more tasks
-                            </p>
-                        )}
-                    </>
-                )}
-            </CardContent>
+            <div className='max-h-full overflow-y-auto scroll-smooth py-1 scrollbar-thumb-muted-foreground scrollbar-thin scrollbar-track-transparent'>
+                <CardContent className="space-y-2 px-2">
+                    {taskCount === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-4 text-center">
+                            <p className="text-sm text-muted-foreground">No tasks yet</p>
+                            <CreateTaskDialog
+                                columnId={column.id}
+                                onTaskCreated={onTaskCreated}
+                                trigger={
+                                    <Button variant="ghost" size="sm" className="mt-2 text-muted-foreground">
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Add Task
+                                    </Button>
+                                }
+                            />
+                        </div>
+                    ) : (
+                        <>
+                            <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+                                {tasks.slice(0, 5).map((task) => (
+                                    <SortableTask
+                                        key={task.id}
+                                        task={task}
+                                        columnId={column.id}
+                                        onTaskUpdated={onTaskUpdated}
+                                        onTaskDeleted={onTaskDeleted}
+                                    />
+                                ))}
+                            </SortableContext>
+                        </>
+                    )}
+                </CardContent>
 
-            <EditColumnDialog
-                column={column}
-                boardId={boardId}
-                open={editDialogOpen}
-                onOpenChange={setEditDialogOpen}
-                onColumnUpdated={onColumnUpdated}
-            />
+                <EditColumnDialog
+                    column={column}
+                    boardId={boardId}
+                    open={editDialogOpen}
+                    onOpenChange={setEditDialogOpen}
+                    onColumnUpdated={onColumnUpdated}
+                    />
+            </div>
+            {
+                taskCount !== 0
+                &&
+                <CardFooter>
+                    <CreateTaskDialog
+                        columnId={column.id}
+                        onTaskCreated={onTaskCreated}
+                        trigger={
+                            <Button variant="ghost" size="sm" className="w-full justify-center text-muted-foreground">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Add Task
+                            </Button>
+                        }
+                    />
+                </CardFooter>
+            }
         </Card>
     );
 }
