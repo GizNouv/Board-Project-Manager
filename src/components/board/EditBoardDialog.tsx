@@ -114,7 +114,7 @@ export function EditBoardDialog({
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogTrigger asChild>
+            {/* <DialogTrigger asChild>
                 {trigger || (
                     <Button
                         variant="ghost"
@@ -125,7 +125,7 @@ export function EditBoardDialog({
                         <span className="sr-only">Edit board</span>
                     </Button>
                 )}
-            </DialogTrigger>
+            </DialogTrigger> */}
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Edit Board</DialogTitle>

@@ -41,8 +41,7 @@ export function BoardMenu({ boardId, boardTitle, onEdit, onDelete, isDeleting = 
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button
-                        variant="ghost"
-                        size="sm"
+                        variant="secondary"
                         className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                     >
                         <MoreHorizontal className="h-4 w-4" />
