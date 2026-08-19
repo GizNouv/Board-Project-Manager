@@ -726,7 +726,7 @@ export function BoardView({ board: initialBoard, className, onColumnCreated }: B
           items={columns.map(col => `column-${col.id}`)}
           strategy={horizontalListSortingStrategy}
         >
-          <div className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-track-transparent scrollbar-thumb-muted-foreground">
+          <div className="flex gap-4 overflow-x-auto overflow-y-clip scroll-smooth scrollbar-track-transparent scrollbar-thumb-muted-foreground">
             {columns.map((column) => (
               <SortableColumn
                 key={column.id}
@@ -749,7 +749,7 @@ export function BoardView({ board: initialBoard, className, onColumnCreated }: B
       </div>
       <DragOverlay>
         {activeColumn && (
-          <div className="w-[280px] opacity-90">
+          <div className="w-[280px] opacity-90 cursor-grabbing">
             <div className="rounded-lg border bg-card p-4 shadow-lg">
               <div className="flex items-center justify-between">
                 <h3 className="font-medium">{activeColumn.title}</h3>
@@ -761,7 +761,7 @@ export function BoardView({ board: initialBoard, className, onColumnCreated }: B
           </div>
         )}
         {activeTask && (
-          <div className="w-[280px] opacity-90">
+          <div className="w-[280px] opacity-90 cursor-grabbing">
             <div className="rounded-md border bg-card p-3 shadow-lg">
               <p className="font-medium text-sm">{activeTask.title}</p>
               <div className="mt-2 flex items-center gap-2">
