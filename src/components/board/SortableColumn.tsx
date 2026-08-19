@@ -146,25 +146,25 @@ export function SortableColumn({
       style={style}
       {...attributes}
       {...listeners}
-      className="h-full cursor-grab active:cursor-grabbing relative flex-shrink-0 w-[280px]"
+      className=" cursor-grab active:cursor-grabbing relative flex-shrink-0 w-[280px] h-[calc(100svh-230px)] overflow-hidden mb-4"
       data-column-id={column.id}
       onKeyDown={handleKeyDown}
     >
-      {isDropTarget && dropPosition === 'left' && (
+      {/* {isDropTarget && dropPosition === 'left' && (
         <div className="absolute -left-2 top-0 bottom-0 w-1 bg-blue-500 rounded-full shadow-lg z-20 animate-pulse" />
       )}
 
       {isDropTarget && dropPosition === 'right' && (
         <div className="absolute -right-2 top-0 bottom-0 w-1 bg-purple-500 rounded-full shadow-lg z-20 animate-pulse" />
-      )}
+      )} */}
 
       <div className="relative h-full">
-        <div
+        {/* <div
           className="absolute -left-2 top-1/2 -translate-y-1/2 rounded p-1 hover:bg-accent opacity-50 hover:opacity-100 z-10"
           aria-label="Drag column"
         >
           <GripVertical className="h-4 w-4 text-muted-foreground" />
-        </div>
+        </div> */}
         <ColumnView
           column={column}
           boardId={boardId}

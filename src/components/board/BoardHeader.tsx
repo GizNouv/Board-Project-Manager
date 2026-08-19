@@ -57,6 +57,12 @@ export function BoardHeader({
               )}
             </p>
           </div>
+        </div>
+        <div className='flex gap-2 items-center'>
+          <CreateColumnDialog
+            boardId={boardId}
+            onColumnCreated={onColumnCreated}
+          />
           <BoardMenu
             boardId={boardId}
             boardTitle={title}
@@ -65,10 +71,6 @@ export function BoardHeader({
             isDeleting={isDeleting}
           />
         </div>
-        <CreateColumnDialog
-          boardId={boardId}
-          onColumnCreated={onColumnCreated}
-        />
       </div>
 
       <EditBoardDialog

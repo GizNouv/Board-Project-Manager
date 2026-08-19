@@ -24,6 +24,7 @@ import { reorderColumnsAction } from '@/app/actions/board';
 import { reorderTasksAction, moveTaskAction } from '@/app/actions/task';
 import { useBoardStore } from '@/stores/boardStore';
 import { useBoardLogic } from '@/hooks/useBoardLogic';
+import { cn } from '@/lib/utils';
 
 interface BoardViewProps {
   board: {
@@ -720,12 +721,12 @@ export function BoardView({ board: initialBoard, className, onColumnCreated }: B
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div ref={setContainerRef} className={className}>
+      <div id='boardView' ref={setContainerRef} className={cn(className, 'm-0')}>
         <SortableContext
           items={columns.map(col => `column-${col.id}`)}
           strategy={horizontalListSortingStrategy}
         >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-track-transparent scrollbar-thumb-muted-foreground">
             {columns.map((column) => (
               <SortableColumn
                 key={column.id}
@@ -741,10 +742,10 @@ export function BoardView({ board: initialBoard, className, onColumnCreated }: B
             ))}
           </div>
         </SortableContext>
-        <div
+        {/* <div
           className={`h-16 w-full mt-2 rounded-lg border-2 border-dashed transition-colors ${isContainerOver ? 'border-primary bg-primary/10' : 'border-transparent'
             }`}
-        />
+        /> */}
       </div>
       <DragOverlay>
         {activeColumn && (
