@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useDndContext, useDroppable } from '@dnd-kit/core';
+import { useDroppable } from '@dnd-kit/core';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableTask } from './SortableTask';
@@ -41,17 +41,6 @@ export function ColumnView({
     const [isDeleting, setIsDeleting] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-    const { active, over } = useDndContext();
-    const isDraggingTask = active?.data?.current?.type === 'task';
-
-    // checking for highlight column
-    const isOverColumn =
-        over?.id === column.id || // over column
-        (over?.data?.current?.columnId === column.id && // over task within column
-            over?.data?.current?.type === 'task');
-
-    const shouldHighlight = isDraggingTask && isOverColumn;
-
     const tasks = column.tasks;
     const taskCount = tasks.length;
 
@@ -76,8 +65,7 @@ export function ColumnView({
 
     // Set up droppable for the column
     const { setNodeRef: setDroppableRef, isOver } = useDroppable({
-        id: isDraggingTask ? column.id : 'disabled',
-        disabled: !isDraggingTask,
+        id: column.id,
         data: {
             type: 'column',
             columnId: column.id,
@@ -102,7 +90,7 @@ export function ColumnView({
     return (
         <Card
             ref={setDroppableRef}
-            className={cn('max-h-full gap-2 border-border border', className, shouldHighlight && 'border-primary')}
+            className={cn('max-h-full gap-2 border-border border', className, isOver && 'border-primary')}
         >
             <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -126,11 +114,6 @@ export function ColumnView({
                 <CardContent className="space-y-2 px-2">
                     {taskCount === 0 ? (
                         <div className="flex flex-col items-center justify-center py-4 text-center">
-                            {isDraggingTask && active?.data?.current?.columnId !== column.id && isOver && (
-                                <div className="w-full h-16 rounded-lg border-2 border-dashed border-primary bg-primary/5 animate-pulse flex items-center justify-center mb-2">
-                                    <span className="text-xs text-muted-foreground">Drop here</span>
-                                </div>
-                            )}
                             <p className="text-sm text-muted-foreground">No tasks yet</p>
                             <CreateTaskDialog
                                 columnId={column.id}
@@ -146,7 +129,7 @@ export function ColumnView({
                     ) : (
                         <>
                             <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-                                {tasks.map((task) => (
+                                {tasks.slice(0, 5).map((task) => (
                                     <SortableTask
                                         key={task.id}
                                         task={task}
@@ -156,11 +139,6 @@ export function ColumnView({
                                     />
                                 ))}
                             </SortableContext>
-                            {isDraggingTask && active?.data?.current?.columnId !== column.id && isOver && taskCount > 0 && (
-                                <div className="mt-2 h-16 rounded-lg border-2 border-dashed border-primary bg-primary/5 animate-pulse flex items-center justify-center">
-                                    <span className="text-xs text-muted-foreground">Drop here</span>
-                                </div>
-                            )}
                         </>
                     )}
                 </CardContent>
@@ -171,7 +149,7 @@ export function ColumnView({
                     open={editDialogOpen}
                     onOpenChange={setEditDialogOpen}
                     onColumnUpdated={onColumnUpdated}
-                />
+                    />
             </div>
             {
                 taskCount !== 0
