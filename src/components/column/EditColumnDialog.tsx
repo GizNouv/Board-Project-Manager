@@ -125,7 +125,7 @@ export function EditColumnDialog({
                         Update the column name below.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit(onSubmit)} onPointerDown={(e) => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                <form onSubmit={handleSubmit(onSubmit)}>
                     <div className="space-y-4 py-4">
                         {error && (
                             <Alert variant="destructive">
