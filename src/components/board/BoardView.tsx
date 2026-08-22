@@ -18,6 +18,7 @@ import { useBoardStore } from '@/stores/boardStore';
 import { useBoardLogic } from '@/hooks/useBoardLogic';
 
 import { cn } from '@/lib/utils';
+import { AutoScroller } from '@dnd-kit/dom';
 
 interface BoardViewProps {
   board: {
@@ -130,9 +131,9 @@ export function BoardView({
         prevColumns.map((column) =>
           column.id === updatedColumn.id
             ? {
-                ...column,
-                title: updatedColumn.title,
-              }
+              ...column,
+              title: updatedColumn.title,
+            }
             : column
         )
       );
@@ -503,12 +504,12 @@ export function BoardView({
       destinationIndex == null
         ? destinationColumn.tasks.length
         : Math.max(
-            0,
-            Math.min(
-              destinationIndex,
-              destinationColumn.tasks.length
-            )
-          );
+          0,
+          Math.min(
+            destinationIndex,
+            destinationColumn.tasks.length
+          )
+        );
 
     destinationColumn.tasks.splice(
       insertIndex,
@@ -766,7 +767,7 @@ export function BoardView({
       typeof source.index === 'number' &&
       source.index >= 0 &&
       source.index <
-        destinationColumn.tasks.length
+      destinationColumn.tasks.length
     ) {
       finalIndex = source.index;
     }
@@ -1110,6 +1111,13 @@ export function BoardView({
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      plugins={(defaults) => [
+        ...defaults,
+        AutoScroller.configure({
+          acceleration: 15,
+          threshold: { x: 0.3, y: 0.3 },
+        }),
+      ]}
     >
       <div
         id="boardView"
