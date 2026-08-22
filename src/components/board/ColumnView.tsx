@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useDndContext, useDroppable } from '@dnd-kit/core';
+import { useDroppable } from '@dnd-kit/react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableTask } from './SortableTask';
 import { CreateTaskDialog } from '@/components/task/CreateTaskDialog';
 import { EditColumnDialog } from '@/components/column/EditColumnDialog';
@@ -12,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { ColumnData, TaskData } from '@/types/kanban';
 import { deleteColumnAction } from '@/app/actions/column';
-import { useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 interface ColumnViewProps {
@@ -24,7 +22,7 @@ interface ColumnViewProps {
     onTaskDeleted?: (taskId: string) => void;
     onColumnUpdated?: (column: ColumnData) => void;
     onColumnDeleted?: (columnId: string) => void;
-    onColumnCreated?: (column: ColumnData) => void;  // ✅ Add this prop
+    onColumnCreated?: (column: ColumnData) => void;
 }
 
 export function ColumnView({
@@ -36,52 +34,26 @@ export function ColumnView({
     onTaskDeleted,
     onColumnUpdated,
     onColumnDeleted,
-    onColumnCreated,  // ✅ Add this
+    onColumnCreated,
 }: ColumnViewProps) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-    const { active, over } = useDndContext();
-    const isDraggingTask = active?.data?.current?.type === 'task';
-
-    // checking for highlight column
-    const isOverColumn =
-        over?.id === column.id || // over column
-        (over?.data?.current?.columnId === column.id && // over task within column
-            over?.data?.current?.type === 'task');
-
-    const shouldHighlight = isDraggingTask && isOverColumn;
-
     const tasks = column.tasks;
     const taskCount = tasks.length;
 
-    useEffect(() => {
-        console.log(`📋 ColumnView render: ${column.id} - ${column.title}`);
-        console.log(`   tasks:`, tasks.map(t => ({ id: t.id, title: t.title })));
-    }, [column.id, column.title, tasks]);
-
-    // Check for duplicate task IDs
-    useEffect(() => {
-        const taskIds = tasks.map(t => t.id);
-        const uniqueIds = new Set(taskIds);
-        if (taskIds.length !== uniqueIds.size) {
-            console.warn(`⚠️ DUPLICATE TASK IDs FOUND in column: ${column.id} - ${column.title}`);
-            console.warn('Task IDs:', taskIds);
-        }
-    }, [tasks, column.id]);
-
-    // Prepare task IDs for sortable context
-    const taskIds = tasks.map(task => `${column.id}-task-${task.id}`);
-    console.log(`🔄 ColumnView taskIds for ${column.id}:`, taskIds);
-
-    // Set up droppable for the column
-    const { setNodeRef: setDroppableRef, isOver } = useDroppable({
-        id: isDraggingTask ? column.id : 'disabled',
-        disabled: !isDraggingTask,
-        data: {
-            type: 'column',
-            columnId: column.id,
-        },
+    // Makes the column itself a drop target, so a task can be dropped
+    // into empty space — including an empty column, which otherwise
+    // has no task-level droppables to catch it. collisionPriority is
+    // kept lower than a task's own (default) priority so hovering
+    // directly over a task still targets that task, not the column
+    // background behind it — this is the dnd-kit-documented pattern
+    // for kanban-style boards.
+    const { ref: droppableRef, isDropTarget } = useDroppable({
+        id: column.id,
+        type: 'column',
+        accept: 'task',
+        collisionPriority: -1,
     });
 
     const handleDelete = async () => {
@@ -101,8 +73,8 @@ export function ColumnView({
 
     return (
         <Card
-            ref={setDroppableRef}
-            className={cn('max-h-full gap-2 border-border border', className, shouldHighlight && 'border-primary')}
+            ref={droppableRef}
+            className={cn('max-h-full gap-2 border-border border', className, isDropTarget && 'border-primary')}
         >
             <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -126,11 +98,6 @@ export function ColumnView({
                 <CardContent className="space-y-2 px-2">
                     {taskCount === 0 ? (
                         <div className="flex flex-col items-center justify-center py-4 text-center">
-                            {isDraggingTask && active?.data?.current?.columnId !== column.id && isOver && (
-                                <div className="w-full h-16 rounded-lg border-2 border-dashed border-primary bg-primary/5 animate-pulse flex items-center justify-center mb-2">
-                                    <span className="text-xs text-muted-foreground">Drop here</span>
-                                </div>
-                            )}
                             <p className="text-sm text-muted-foreground">No tasks yet</p>
                             <CreateTaskDialog
                                 columnId={column.id}
@@ -144,24 +111,16 @@ export function ColumnView({
                             />
                         </div>
                     ) : (
-                        <>
-                            <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-                                {tasks.map((task) => (
-                                    <SortableTask
-                                        key={task.id}
-                                        task={task}
-                                        columnId={column.id}
-                                        onTaskUpdated={onTaskUpdated}
-                                        onTaskDeleted={onTaskDeleted}
-                                    />
-                                ))}
-                            </SortableContext>
-                            {isDraggingTask && active?.data?.current?.columnId !== column.id && isOver && taskCount > 0 && (
-                                <div className="mt-2 h-16 rounded-lg border-2 border-dashed border-primary bg-primary/5 animate-pulse flex items-center justify-center">
-                                    <span className="text-xs text-muted-foreground">Drop here</span>
-                                </div>
-                            )}
-                        </>
+                        tasks.map((task, index) => (
+                            <SortableTask
+                                key={task.id}
+                                task={task}
+                                columnId={column.id}
+                                index={index}
+                                onTaskUpdated={onTaskUpdated}
+                                onTaskDeleted={onTaskDeleted}
+                            />
+                        ))
                     )}
                 </CardContent>
 
