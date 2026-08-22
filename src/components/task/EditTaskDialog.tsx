@@ -154,15 +154,15 @@ export function EditTaskDialog({
                         Update the task details below.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit(onSubmit)} data-no-dnd="true">
-                    <div className="space-y-4 py-4" data-no-dnd="true">
+                <form onSubmit={handleSubmit(onSubmit)}>
+                    <div className="space-y-4 py-4">
                         {error && (
                             <Alert variant="destructive">
                                 <AlertDescription>{error}</AlertDescription>
                             </Alert>
                         )}
 
-                        <FieldGroup data-no-dnd="true">
+                        <FieldGroup>
                             <Field>
                                 <FieldLabel htmlFor="edit-title">Title *</FieldLabel>
                                 <FieldContent>
@@ -172,18 +172,14 @@ export function EditTaskDialog({
                                         placeholder="Enter task title"
                                         disabled={isLoading}
                                         aria-invalid={!!errors.title}
-                                        {...register('title')}
-                                        onPointerDown={(e) => e.stopPropagation()}
-                                        onMouseDown={(e) => e.stopPropagation()}
-                                        onKeyDown={(e) => e.stopPropagation()}
-                                        data-no-dnd="true"
+                                        {...register('title')}  
                                     />
                                 </FieldContent>
                                 {errors.title && <FieldError>{errors.title.message}</FieldError>}
                             </Field>
                         </FieldGroup>
 
-                        <FieldGroup data-no-dnd="true">
+                        <FieldGroup>
                             <Field>
                                 <FieldLabel htmlFor="edit-description">Description</FieldLabel>
                                 <FieldContent>
@@ -193,17 +189,13 @@ export function EditTaskDialog({
                                         disabled={isLoading}
                                         aria-invalid={!!errors.description}
                                         {...register('description')}
-                                        onPointerDown={(e) => e.stopPropagation()}
-                                        onMouseDown={(e) => e.stopPropagation()}
-                                        onKeyDown={(e) => e.stopPropagation()}
-                                        data-no-dnd="true"
                                     />
                                 </FieldContent>
                                 {errors.description && <FieldError>{errors.description.message}</FieldError>}
                             </Field>
                         </FieldGroup>
 
-                        <FieldGroup data-no-dnd="true">
+                        <FieldGroup>
                             <Field>
                                 <FieldLabel htmlFor="edit-priority">Priority</FieldLabel>
                                 <FieldContent>
@@ -218,12 +210,12 @@ export function EditTaskDialog({
                                             >
                                                 <SelectTrigger
                                                     id="edit-priority"
-                                                    onPointerDown={(e) => e.stopPropagation()}
-                                                    data-no-dnd="true"
+                                                    
+                                                
                                                 >
                                                     <SelectValue placeholder="Select priority" />
                                                 </SelectTrigger>
-                                                <SelectContent data-no-dnd="true">
+                                                <SelectContent>
                                                     <SelectItem value="LOW">Low</SelectItem>
                                                     <SelectItem value="MEDIUM">Medium</SelectItem>
                                                     <SelectItem value="HIGH">High</SelectItem>
@@ -237,8 +229,8 @@ export function EditTaskDialog({
                             </Field>
                         </FieldGroup>
 
-                        <div className="grid grid-cols-2 gap-4" data-no-dnd="true">
-                            <FieldGroup data-no-dnd="true">
+                        <div className="grid grid-cols-2 gap-4">
+                            <FieldGroup>
                                 <Field>
                                     <FieldLabel htmlFor="edit-estimate">Estimate</FieldLabel>
                                     <FieldContent>
@@ -250,17 +242,13 @@ export function EditTaskDialog({
                                             disabled={isLoading}
                                             aria-invalid={!!errors.estimate}
                                             {...register('estimate', { valueAsNumber: true })}
-                                            onPointerDown={(e) => e.stopPropagation()}
-                                            onMouseDown={(e) => e.stopPropagation()}
-                                            onKeyDown={(e) => e.stopPropagation()}
-                                            data-no-dnd="true"
                                         />
                                     </FieldContent>
                                     {errors.estimate && <FieldError>{errors.estimate.message}</FieldError>}
                                 </Field>
                             </FieldGroup>
 
-                            <FieldGroup data-no-dnd="true">
+                            <FieldGroup>
                                 <Field>
                                     <FieldLabel htmlFor="edit-estimateUnit">Unit</FieldLabel>
                                     <FieldContent>
@@ -275,12 +263,12 @@ export function EditTaskDialog({
                                                 >
                                                     <SelectTrigger
                                                         id="edit-estimateUnit"
-                                                        onPointerDown={(e) => e.stopPropagation()}
-                                                        data-no-dnd="true"
+                                                        
+                                                    
                                                     >
                                                         <SelectValue placeholder="Select unit" />
                                                     </SelectTrigger>
-                                                    <SelectContent data-no-dnd="true">
+                                                    <SelectContent>
                                                         <SelectItem value="hours">Hours</SelectItem>
                                                         <SelectItem value="days">Days</SelectItem>
                                                     </SelectContent>
@@ -294,7 +282,7 @@ export function EditTaskDialog({
                         </div>
 
                         {taskType === 'bug' && (
-                            <FieldGroup data-no-dnd="true">
+                            <FieldGroup>
                                 <Field>
                                     <FieldLabel htmlFor="edit-severity">Severity</FieldLabel>
                                     <FieldContent>
@@ -309,12 +297,12 @@ export function EditTaskDialog({
                                                 >
                                                     <SelectTrigger
                                                         id="edit-severity"
-                                                        onPointerDown={(e) => e.stopPropagation()}
-                                                        data-no-dnd="true"
+                                                        
+                                                    
                                                     >
                                                         <SelectValue placeholder="Select severity" />
                                                     </SelectTrigger>
-                                                    <SelectContent data-no-dnd="true">
+                                                    <SelectContent>
                                                         <SelectItem value="minor">Minor</SelectItem>
                                                         <SelectItem value="major">Major</SelectItem>
                                                         <SelectItem value="critical">Critical</SelectItem>
@@ -329,7 +317,7 @@ export function EditTaskDialog({
                         )}
 
                         {taskType === 'feature' && (
-                            <FieldGroup data-no-dnd="true">
+                            <FieldGroup>
                                 <Field>
                                     <FieldLabel htmlFor="edit-complexity">Complexity</FieldLabel>
                                     <FieldContent>
@@ -344,12 +332,10 @@ export function EditTaskDialog({
                                                 >
                                                     <SelectTrigger
                                                         id="edit-complexity"
-                                                        onPointerDown={(e) => e.stopPropagation()}
-                                                        data-no-dnd="true"
                                                     >
                                                         <SelectValue placeholder="Select complexity" />
                                                     </SelectTrigger>
-                                                    <SelectContent data-no-dnd="true">
+                                                    <SelectContent>
                                                         <SelectItem value="low">Low</SelectItem>
                                                         <SelectItem value="medium">Medium</SelectItem>
                                                         <SelectItem value="high">High</SelectItem>
