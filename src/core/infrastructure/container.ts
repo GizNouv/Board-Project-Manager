@@ -1,29 +1,64 @@
+import { PrismaTaskRepository } from './repositories/PrismaTaskRepository';
+import { PrismaColumnRepository } from './repositories/PrismaColumnRepository';
+import { PrismaBoardRepository } from './repositories/PrismaBoardRepository';
 import { PrismaUserRepository } from './repositories/PrismaUserRepository';
-import { UserApplicationService } from '../application/services/UserApplicationService';
+import { TaskApplicationService } from '@/core/application/services/TaskApplicationService';
+import { BoardApplicationService } from '@/core/application/services/BoardApplicationService';
+import { UserApplicationService } from '@/core/application/services/UserApplicationService';
 
-/**
- * Dependency Injection Container
- * Singleton instances for the application
- */
 class Container {
   private static instance: Container;
-  private _userApplicationService: UserApplicationService | null = null;
+  
+  private taskRepository: PrismaTaskRepository;
+  private columnRepository: PrismaColumnRepository;
+  private boardRepository: PrismaBoardRepository;
+  private userRepository: PrismaUserRepository;
+  
+  private taskService: TaskApplicationService | null = null;
+  private boardService: BoardApplicationService | null = null;
+  private userService: UserApplicationService | null = null;
 
-  private constructor() {}
+  private constructor() {
+    this.taskRepository = new PrismaTaskRepository();
+    this.columnRepository = new PrismaColumnRepository();
+    this.boardRepository = new PrismaBoardRepository();
+    this.userRepository = new PrismaUserRepository();
+  }
 
-  public static getInstance(): Container {
+  static getInstance(): Container {
     if (!Container.instance) {
       Container.instance = new Container();
     }
     return Container.instance;
   }
 
-  public get userApplicationService(): UserApplicationService {
-    if (!this._userApplicationService) {
-      const userRepository = new PrismaUserRepository();
-      this._userApplicationService = new UserApplicationService(userRepository);
+  // ✅ Add missing getters
+  getTaskService(): TaskApplicationService {
+    if (!this.taskService) {
+      this.taskService = new TaskApplicationService(
+        this.taskRepository,
+        this.columnRepository,
+        this.boardRepository
+      );
     }
-    return this._userApplicationService;
+    return this.taskService;
+  }
+
+  getBoardService(): BoardApplicationService {
+    if (!this.boardService) {
+      this.boardService = new BoardApplicationService(
+        this.boardRepository,
+        this.columnRepository
+      );
+    }
+    return this.boardService;
+  }
+
+  getUserService(): UserApplicationService {
+    if (!this.userService) {
+      this.userService = new UserApplicationService(this.userRepository);
+    }
+    return this.userService;
   }
 }
 

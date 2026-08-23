@@ -21,7 +21,7 @@ export const authConfig: NextAuthConfig = {
           return null;
         }
 
-        const userService = container.userApplicationService;
+        const userService = container.getUserService();
 
         const result = await userService.getUserByEmail(credentials.email as string);
 
@@ -71,7 +71,7 @@ export const authConfig: NextAuthConfig = {
     async authorized({ auth, request }) {
       const isLoggedIn = !!auth?.user;
       const isOnLoginPage = request.nextUrl?.pathname === ROUTES.login || request.nextUrl?.pathname === ROUTES.register;
-      const isOnProtectedPage =  protectedRoutes.some((route) => request.nextUrl?.pathname === route)
+      const isOnProtectedPage = protectedRoutes.some((route) => request.nextUrl?.pathname === route)
 
       if (isOnLoginPage) {
         if (isLoggedIn) {

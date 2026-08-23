@@ -16,7 +16,7 @@ export const createAction: CreateAction = <TInput, TOutput>(
 ): ActionBuilder<TInput, TOutput> => {
   let schema: ActionConfig<TInput, TOutput>['schema'];
   let requireAuth = false;
-  let revalidateTarget: RevalidationTarget | undefined;
+  let revalidateTarget: RevalidationTarget<TInput> | undefined;
 
   let handler: ActionHandler<TInput, TOutput> = config.handler;
 

@@ -1,0 +1,1 @@
+export { container } from '@/core/infrastructure/container';

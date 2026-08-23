@@ -27,10 +27,11 @@ export type ActionHandler<TInput, TOutput> = (
 // 3. Revalidation Configuration
 // ============================================================
 
-export type RevalidationTarget =
-    | string
-    | { path: string; type?: 'page' | 'layout' }
-    | RevalidationTarget[];
+export type RevalidationTarget<TInput = any> = 
+  | string 
+  | { path: string; type?: 'page' | 'layout' }
+  | ((input: TInput) => string | { path: string; type?: 'page' | 'layout' })
+  | RevalidationTarget<TInput>[];
 
 // ============================================================
 // 4. Action Configuration

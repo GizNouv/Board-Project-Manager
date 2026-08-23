@@ -1,27 +1,32 @@
 import { revalidatePath } from 'next/cache';
 import type { ActionHandler, ActionContext, RevalidationTarget, ActionResult } from './types';
 
-function normalizeTargets(target: RevalidationTarget): string[] {
-  if (typeof target === 'string') {
-    return [target];
+function normalizeTargets<TInput>(
+  target: RevalidationTarget<TInput>,
+  input: TInput
+): string[] {
+  // Resolve function if provided
+  const resolved = typeof target === 'function' ? target(input) : target;
+  
+  if (typeof resolved === 'string') {
+    return [resolved];
   }
-  if (Array.isArray(target)) {
-    return target.flatMap(t => normalizeTargets(t));
+  if (Array.isArray(resolved)) {
+    return resolved.flatMap(t => normalizeTargets(t, input));
   }
   // { path, type? }
-  return [target.path];
+  return [resolved.path];
 }
 
 export function withRevalidation<TInput, TOutput>(
   handler: ActionHandler<TInput, TOutput>,
-  target: RevalidationTarget
+  target: RevalidationTarget<TInput>
 ): ActionHandler<TInput, TOutput> {
   return async (context: ActionContext<TInput>): Promise<ActionResult<TOutput>> => {
     const result = await handler(context);
 
-    // ✅ Now TypeScript knows result has 'success' property
     if (result.success) {
-      const paths = normalizeTargets(target);
+      const paths = normalizeTargets(target, context.input);
       for (const path of paths) {
         revalidatePath(path);
       }
