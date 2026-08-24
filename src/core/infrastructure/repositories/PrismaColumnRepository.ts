@@ -134,62 +134,60 @@ export class PrismaColumnRepository implements IColumnRepository {
 
   async reorderColumn(columnId: ColumnId, newOrder: number): Promise<Result<void>> {
     try {
+      const columnIdStr = columnId.toString();
+      const STAGING_OFFSET = 1000;
+
       await prisma.$transaction(async (tx) => {
+        // 1. Get the column
         const column = await tx.column.findUnique({
-          where: { id: columnId.toString() }
+          where: { id: columnIdStr }
         });
 
         if (!column) {
-          throw new EntityNotFoundException('Column', columnId.toString());
+          throw new EntityNotFoundException('Column', columnIdStr);
         }
 
+        const boardId = column.boardId;
+
+        // 2. Get all columns in this board
         const columns = await tx.column.findMany({
-          where: { boardId: column.boardId },
+          where: { boardId },
+          select: { id: true, order: true },
           orderBy: { order: 'asc' }
         });
 
+        // 3. Validate new order
         if (newOrder < 0 || newOrder >= columns.length) {
           throw new ValidationException('Invalid order position');
         }
 
-        const currentOrder = column.order;
-        if (currentOrder < newOrder) {
-          await tx.column.updateMany({
-            where: {
-              boardId: column.boardId,
-              order: {
-                gt: currentOrder,
-                lte: newOrder
-              }
-            },
-            data: {
-              order: { decrement: 1 },
-              updatedAt: new Date()
-            }
-          });
-        } else if (currentOrder > newOrder) {
-          await tx.column.updateMany({
-            where: {
-              boardId: column.boardId,
-              order: {
-                gte: newOrder,
-                lt: currentOrder
-              }
-            },
-            data: {
-              order: { increment: 1 },
-              updatedAt: new Date()
-            }
+        // 4. No-op if already in correct position
+        const currentIndex = columns.findIndex(c => c.id === columnIdStr);
+        if (currentIndex === newOrder) {
+          return;
+        }
+
+        // 5. Build desired final ordering
+        const moved = columns.find(c => c.id === columnIdStr)!;
+        const rest = columns.filter(c => c.id !== columnIdStr);
+        const desired = [...rest];
+        desired.splice(newOrder, 0, moved);
+
+        // 6. Phase 1: Stage all columns to unique high values
+        for (let i = 0; i < desired.length; i++) {
+          await tx.column.update({
+            where: { id: desired[i].id },
+            data: { order: i + STAGING_OFFSET }
           });
         }
 
-        await tx.column.update({
-          where: { id: columnId.toString() },
-          data: {
-            order: newOrder,
-            updatedAt: new Date()
-          }
-        });
+        // 7. Phase 2: Finalize to 0..n-1
+        for (let i = 0; i < desired.length; i++) {
+          await tx.column.update({
+            where: { id: desired[i].id },
+            data: { order: i }
+          });
+        }
       });
 
       return ResultFactory.success(undefined);
