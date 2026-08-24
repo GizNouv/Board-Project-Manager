@@ -29,4 +29,5 @@ export const moveTaskAction = createAction<MoveTaskInput, void>({
 })
   .withValidation(moveTaskSchema)
   .withAuth()
-  .withRevalidation(({ input }) => `/boards/${input.sourceColumnId}`);
+  .withRevalidation((input) => `/boards/${input.sourceColumnId}`)
+  .build();

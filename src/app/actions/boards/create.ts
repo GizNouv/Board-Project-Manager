@@ -32,4 +32,5 @@ export const createBoardAction = createAction<CreateBoardInput, BoardDTO>({
 })
     .withValidation(createBoardSchema)
     .withAuth()
-    .withRevalidation('/boards');
+    .withRevalidation('/boards')
+    .build();

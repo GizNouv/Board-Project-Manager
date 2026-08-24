@@ -21,4 +21,5 @@ export const deleteTaskAction = createAction<DeleteTaskInput, void>({
 })
   .withValidation(deleteTaskSchema)
   .withAuth()
-  .withRevalidation(({ input }) => `/boards/${input.columnId}`);
+  .withRevalidation((input) => `/boards/${input.columnId}`)
+  .build();

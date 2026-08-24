@@ -21,4 +21,5 @@ export const deleteColumnAction = createAction<DeleteColumnInput, void>({
 })
     .withValidation(deleteColumnSchema)
     .withAuth()
-    .withRevalidation(({ input }) => `/boards/${input.boardId}`);
+    .withRevalidation((input) => `/boards/${input.boardId}`)
+    .build();

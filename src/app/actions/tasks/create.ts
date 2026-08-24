@@ -43,4 +43,5 @@ export const createTaskAction = createAction<CreateTaskInput, TaskDTO>({
 })
 .withValidation(createTaskSchema)
 .withAuth()
-.withRevalidation(({ input }) => `/boards/${input.columnId}`);
+.withRevalidation((input) => `/boards/${input.columnId}`)
+.build();

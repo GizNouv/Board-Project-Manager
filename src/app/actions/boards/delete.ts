@@ -21,4 +21,5 @@ export const deleteBoardAction = createAction<DeleteBoardInput, void>({
 })
 .withValidation(deleteBoardSchema)
 .withAuth()
-.withRevalidation('/boards');
+.withRevalidation('/boards')
+.build();

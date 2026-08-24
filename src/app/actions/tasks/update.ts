@@ -50,4 +50,5 @@ export const updateTaskAction = createAction<UpdateTaskInput, TaskDTO>({
 })
   .withValidation(updateTaskSchema)
   .withAuth()
-  .withRevalidation(({ input }) => `/boards/${input.columnId}`);
+  .withRevalidation((input) => `/boards/${input.columnId}`)
+  .build();

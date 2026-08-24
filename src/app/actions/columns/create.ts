@@ -33,4 +33,5 @@ export const createColumnAction = createAction<CreateColumnInput, ColumnDTO>({
 })
     .withValidation(createColumnSchema)
     .withAuth()
-    .withRevalidation(({ input }) => `/boards/${input.boardId}`);
+    .withRevalidation((input) => `/boards/${input.boardId}`)
+    .build();

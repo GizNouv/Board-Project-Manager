@@ -26,4 +26,5 @@ export const reorderColumnsAction = createAction<ReorderColumnsInput, void>({
 })
     .withValidation(reorderColumnsSchema)
     .withAuth()
-    .withRevalidation(({ input }) => `/boards/${input.boardId}`);
+    .withRevalidation((input) => `/boards/${input.boardId}`)
+    .build();

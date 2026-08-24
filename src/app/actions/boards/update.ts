@@ -31,4 +31,5 @@ export const updateBoardAction = createAction<UpdateBoardInput, BoardDTO>({
 })
 .withValidation(updateBoardSchema)
 .withAuth()
-.withRevalidation(({ input }) => `/boards/${input.boardId}`);
+.withRevalidation((input) => `/boards/${input.boardId}`)
+.build();

@@ -25,4 +25,5 @@ export const reorderTasksAction = createAction<ReorderTasksInput, void>({
 })
   .withValidation(reorderTasksSchema)
   .withAuth()
-  .withRevalidation(({ input }) => `/boards/${input.columnId}`);
+  .withRevalidation((input) => `/boards/${input.columnId}`)
+  .build();

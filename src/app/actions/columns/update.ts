@@ -32,4 +32,5 @@ export const updateColumnAction = createAction<UpdateColumnInput, ColumnDTO>({
 })
     .withValidation(updateColumnSchema)
     .withAuth()
-    .withRevalidation(({ input }) => `/boards/${input.boardId}`);
+    .withRevalidation((input) => `/boards/${input.boardId}`)
+    .build();
