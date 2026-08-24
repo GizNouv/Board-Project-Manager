@@ -19,7 +19,7 @@ import {
 import { Field, FieldLabel, FieldContent, FieldError, FieldGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { updateBoardAction } from '@/app/actions/board';
+import { updateBoardAction } from '@/app/actions';
 import { BoardData } from '@/types/kanban';
 
 const editBoardSchema = z.object({

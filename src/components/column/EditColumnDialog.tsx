@@ -18,7 +18,7 @@ import {
 import { Field, FieldLabel, FieldContent, FieldError, FieldGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { updateColumnAction } from '@/app/actions/board';
+import { updateColumnAction } from '@/app/actions';
 import { ColumnData } from '@/types/kanban';
 
 const editColumnSchema = z.object({

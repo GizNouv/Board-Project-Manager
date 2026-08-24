@@ -8,11 +8,11 @@ import { SortableColumn } from './SortableColumn';
 
 import { ColumnData, TaskData } from '@/types/kanban';
 
-import { reorderColumnsAction } from '@/app/actions/board';
-import {
-  reorderTasksAction,
+import { 
+  reorderColumnsAction,
   moveTaskAction,
-} from '@/app/actions/task';
+  reorderTasksAction 
+} from '@/app/actions';
 
 import { useBoardStore } from '@/stores/boardStore';
 import { useBoardLogic } from '@/hooks/useBoardLogic';

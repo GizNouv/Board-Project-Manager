@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { TaskData } from '@/types/kanban';
 import { TaskMenu } from './TaskMenu';
 import { EditTaskDialog } from '@/components/task/EditTaskDialog';
-import { deleteTaskAction } from '@/app/actions/task';
+import { deleteTaskAction } from '@/app/actions';
 
 interface TaskCardProps {
     task: TaskData;

@@ -10,7 +10,7 @@ import { ColumnMenu } from './ColumnMenu';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { ColumnData, TaskData } from '@/types/kanban';
-import { deleteColumnAction } from '@/app/actions/column';
+import { deleteColumnAction } from '@/app/actions';
 import { cn } from '@/lib/utils';
 
 interface ColumnViewProps {

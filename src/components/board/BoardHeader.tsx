@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CreateColumnDialog } from './CreateColumnDialog';
 import { BoardMenu } from './BoardMenu';
-import { deleteBoardAction } from '@/app/actions/board';
+import { deleteBoardAction } from '@/app/actions';
 import { ColumnData } from '@/types/kanban';
 import { useRouter } from 'next/navigation';
 import { EditBoardDialog } from './EditBoardDialog';

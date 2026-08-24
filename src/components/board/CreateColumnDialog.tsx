@@ -19,7 +19,7 @@ import {
 import { Field, FieldLabel, FieldContent, FieldError, FieldGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { createColumnAction } from '@/app/actions/column';
+import { createColumnAction } from '@/app/actions';
 import { ColumnData } from '@/types/kanban';
 
 const createColumnSchema = z.object({

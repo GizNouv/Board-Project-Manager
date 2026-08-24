@@ -20,7 +20,7 @@ import {
 import { Field, FieldLabel, FieldContent, FieldError, FieldGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { createBoardAction, type BoardDTO } from '@/app/actions/board';
+import { createBoardAction } from '@/app/actions';
 
 const createBoardSchema = z.object({
     title: z.string()

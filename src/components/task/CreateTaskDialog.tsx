@@ -27,7 +27,7 @@ import { Field, FieldLabel, FieldContent, FieldError, FieldGroup } from '@/compo
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { createTaskAction } from '@/app/actions/task';
+import { createTaskAction } from '@/app/actions';
 import { TaskData } from '@/types/kanban';
 
 const createTaskSchema = z.object({
@@ -83,6 +83,7 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
                 estimate: data.estimate,
                 estimateUnit: data.estimateUnit,
                 columnId,
+                type: 'FEATURE'
             });
 
             if (!result.success) {

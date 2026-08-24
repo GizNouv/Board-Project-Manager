@@ -26,7 +26,7 @@ import { Field, FieldLabel, FieldContent, FieldError, FieldGroup } from '@/compo
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { updateTaskAction } from '@/app/actions/task';
+import { updateTaskAction } from '@/app/actions';
 import { TaskData } from '@/types/kanban';
 
 const editTaskSchema = z.object({
