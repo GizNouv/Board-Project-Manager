@@ -29,6 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { createTaskAction } from '@/app/actions';
 import { TaskData } from '@/types/kanban';
+import { useAction } from '@/hooks/use-action';
 
 const createTaskSchema = z.object({
     title: z.string()
@@ -51,13 +52,14 @@ interface CreateTaskDialogProps {
 
 export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTaskDialogProps) {
     const [open, setOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+
+    // Use useAction hook for mutation handling
+    const { execute: createTask, isPending, error, reset } = useAction(createTaskAction);
 
     const {
         register,
         handleSubmit,
-        reset,
+        reset: resetForm,
         control,
         formState: { errors },
     } = useForm<CreateTaskFormData>({
@@ -72,58 +74,47 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
     });
 
     const onSubmit = async (data: CreateTaskFormData) => {
-        setIsLoading(true);
-        setError(null);
+        await createTask({
+            title: data.title,
+            description: data.description || '',
+            priority: data.priority,
+            estimate: data.estimate,
+            estimateUnit: data.estimateUnit,
+            columnId,
+            type: 'FEATURE'
+        }, {
+            onSuccess: (result) => {
+                const taskData: TaskData = {
+                    id: result.id,
+                    title: result.title,
+                    description: result.description,
+                    columnId: result.columnId,
+                    estimate: {
+                        value: result.estimate,
+                        unit: result.estimateUnit as 'hours' | 'days',
+                    },
+                    priority: {
+                        value: result.priority,
+                    },
+                    type: result.type,
+                    assigneeId: result.assigneeId,
+                };
 
-        try {
-            const result = await createTaskAction({
-                title: data.title,
-                description: data.description || '',
-                priority: data.priority,
-                estimate: data.estimate,
-                estimateUnit: data.estimateUnit,
-                columnId,
-                type: 'FEATURE'
-            });
+                if (onTaskCreated) {
+                    onTaskCreated(taskData);
+                }
 
-            if (!result.success) {
-                setError(result.message);
-                return;
-            }
-
-            const taskData: TaskData = {
-                id: result.data.id,
-                title: result.data.title,
-                description: result.data.description,
-                columnId: result.data.columnId,
-                estimate: {
-                    value: result.data.estimate,
-                    unit: result.data.estimateUnit as 'hours' | 'days',
-                },
-                priority: {
-                    value: result.data.priority,
-                },
-                type: result.data.type,
-                assigneeId: result.data.assigneeId,
-            };
-
-            if (onTaskCreated) {
-                onTaskCreated(taskData);
-            }
-
-            setOpen(false);
-            reset();
-        } catch (err) {
-            setError('An unexpected error occurred. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
+                setOpen(false);
+                resetForm();
+                reset();
+            },
+        });
     };
 
     const handleOpenChange = (newOpen: boolean) => {
         if (!newOpen) {
+            resetForm();
             reset();
-            setError(null);
         }
         setOpen(newOpen);
     };
@@ -161,7 +152,7 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
                                         id="title"
                                         type="text"
                                         placeholder="Enter task title"
-                                        disabled={isLoading}
+                                        disabled={isPending}
                                         aria-invalid={!!errors.title}
                                         {...register('title')}
                                     />
@@ -177,7 +168,7 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
                                     <Textarea
                                         id="description"
                                         placeholder="Enter task description (optional)"
-                                        disabled={isLoading}
+                                        disabled={isPending}
                                         aria-invalid={!!errors.description}
                                         {...register('description')}
                                     />
@@ -195,7 +186,7 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
                                         control={control}
                                         render={({ field }) => (
                                             <Select
-                                                disabled={isLoading}
+                                                disabled={isPending}
                                                 value={field.value}
                                                 onValueChange={field.onChange}
                                             >
@@ -228,7 +219,7 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
                                             type="number"
                                             min="0"
                                             step="0.5"
-                                            disabled={isLoading}
+                                            disabled={isPending}
                                             aria-invalid={!!errors.estimate}
                                             {...register('estimate', { valueAsNumber: true })}
                                         />
@@ -246,7 +237,7 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
                                             control={control}
                                             render={({ field }) => (
                                                 <Select
-                                                    disabled={isLoading}
+                                                    disabled={isPending}
                                                     value={field.value}
                                                     onValueChange={field.onChange}
                                                 >
@@ -273,14 +264,14 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
                             <Button
                                 type="button"
                                 variant="outline"
-                                disabled={isLoading}
+                                disabled={isPending}
                             >
                                 Cancel
                             </Button>
                         </DialogClose>
-                        <Button type="submit" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isLoading ? 'Creating...' : 'Create Task'}
+                        <Button type="submit" disabled={isPending}>
+                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isPending ? 'Creating...' : 'Create Task'}
                         </Button>
                     </DialogFooter>
                 </form>

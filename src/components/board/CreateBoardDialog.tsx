@@ -21,6 +21,7 @@ import { Field, FieldLabel, FieldContent, FieldError, FieldGroup } from '@/compo
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { createBoardAction } from '@/app/actions';
+import { useAction } from '@/hooks/use-action';
 
 const createBoardSchema = z.object({
     title: z.string()
@@ -38,13 +39,14 @@ interface CreateBoardDialogProps {
 export function CreateBoardDialog({ userId }: CreateBoardDialogProps) {
     const router = useRouter();
     const [open, setOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+
+    // Use useAction hook for mutation handling
+    const { execute: createBoard, isPending, error, reset } = useAction(createBoardAction);
 
     const {
         register,
         handleSubmit,
-        reset,
+        reset: resetForm,
         formState: { errors },
     } = useForm<CreateBoardFormData>({
         resolver: zodResolver(createBoardSchema),
@@ -54,39 +56,28 @@ export function CreateBoardDialog({ userId }: CreateBoardDialogProps) {
     });
 
     const onSubmit = async (data: CreateBoardFormData) => {
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            const result = await createBoardAction({
-                title: data.title,
-                ownerId: userId,
-            });
-
-            if (!result.success) {
-                setError(result.message);
-                return;
-            }
-
-            const board = result.data;
-            setOpen(false);
-            reset();
-            router.push(`/boards/${board.id}`);
-            router.refresh();
-        } catch (err) {
-            setError('An unexpected error occurred. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
+        await createBoard({
+            title: data.title,
+            ownerId: userId,
+        }, {
+            onSuccess: (result) => {
+                setOpen(false);
+                resetForm();
+                reset();
+                router.push(`/boards/${result.id}`);
+                router.refresh();
+            },
+        });
     };
 
     const handleOpenChange = (newOpen: boolean) => {
         if (!newOpen) {
+            resetForm();
             reset();
-            setError(null);
         }
         setOpen(newOpen);
     };
+
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -119,7 +110,7 @@ export function CreateBoardDialog({ userId }: CreateBoardDialogProps) {
                                         id="title"
                                         type="text"
                                         placeholder="e.g., Project Management, Sprint Planning"
-                                        disabled={isLoading}
+                                        disabled={isPending}
                                         aria-invalid={!!errors.title}
                                         {...register('title')}
                                     />
@@ -133,14 +124,14 @@ export function CreateBoardDialog({ userId }: CreateBoardDialogProps) {
                             <Button
                                 type="button"
                                 variant="outline"
-                                disabled={isLoading}
+                                disabled={isPending}
                             >
                                 Cancel
                             </Button>
                         </DialogClose>
-                        <Button type="submit" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isLoading ? 'Creating...' : 'Create Board'}
+                        <Button type="submit" disabled={isPending}>
+                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isPending ? 'Creating...' : 'Create Board'}
                         </Button>
                     </DialogFooter>
                 </form>

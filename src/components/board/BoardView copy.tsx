@@ -43,10 +43,7 @@ export function BoardView({
   onColumnCreated,
 }: BoardViewProps) {
 
-  // Use useAction hooks for mutations
-  const { execute: reorderColumns, isPending: isReorderingColumns } = useAction(reorderColumnsAction);
-  const { execute: moveTask, isPending: isMovingTask } = useAction(moveTaskAction);
-  const { execute: reorderTasks, isPending: isReorderingTasks } = useAction(reorderTasksAction);
+  const {execute: reorderColumns} = useAction(reorderColumnsAction)
 
   const boardId = initialBoard.id;
 
@@ -629,18 +626,20 @@ export function BoardView({
         boardId,
         columnId: movedColumnId,
         newOrder: finalIndex,
-      }, {
-        onSuccess: () => {
-          // Keep optimistic update
-          previousColumnsRef.current = null;
-        },
-        onError: (message) => {
-          // Rollback on failure
-          setColumns(previousColumns);
-          console.error('[DND] ❌ Column reorder failed', message);
-          previousColumnsRef.current = null;
-        },
-      });
+      },
+        {
+          onError: (error) => {
+            setColumns(previousColumns);
+            console.error(
+              '[DND] ❌ Column reorder failed',
+              error
+            );
+
+          }
+        }
+      );
+
+      previousColumnsRef.current = null;
 
       return;
     }
@@ -932,26 +931,36 @@ export function BoardView({
           return;
         }
 
-        await moveTask({
-          taskId,
-          sourceColumnId,
-          targetColumnId: destinationColumn.id,
-          targetOrder: finalIndex,
-          sourceTaskIds,
-          targetTaskIds,
-        }, {
-          onSuccess: () => {
-            console.log('[DND] ✅ Cross-column move persisted');
-            previousColumnsRef.current = null;
-            taskDragSessionRef.current = null;
-          },
-          onError: (message) => {
-            console.error('[DND] ❌ Cross-column move failed', message);
-            setColumns(previousColumns);
-            previousColumnsRef.current = null;
-            taskDragSessionRef.current = null;
-          },
-        });
+        const result =
+          await moveTaskAction({
+            taskId,
+
+            sourceColumnId,
+
+            targetColumnId:
+              destinationColumn.id,
+
+            targetOrder: finalIndex,
+
+            sourceTaskIds,
+
+            targetTaskIds,
+          });
+
+        if (!result.success) {
+          console.error(
+            '[DND] ❌ Cross-column move failed',
+            result.message
+          );
+
+          setColumns(previousColumns);
+
+          return;
+        }
+
+        console.log(
+          '[DND] ✅ Cross-column move persisted'
+        );
 
         return;
       }
@@ -1049,23 +1058,31 @@ export function BoardView({
       /**
        * Persist final ordering.
        */
-      await reorderTasks({
-        columnId: destinationColumn.id,
-        orderedTaskIds: taskList.map((task) => task.id),
-      }, {
-        onSuccess: () => {
-          console.log('[DND] ✅ Task reorder persisted');
-          previousColumnsRef.current = null;
-          taskDragSessionRef.current = null;
-        },
-        onError: (message) => {
-          console.error('[DND] ❌ Task reorder failed', message);
-          setColumns(previousColumns);
-          previousColumnsRef.current = null;
-          taskDragSessionRef.current = null;
-        },
-      });
+      const result =
+        await reorderTasksAction({
+          columnId:
+            destinationColumn.id,
 
+          orderedTaskIds:
+            taskList.map(
+              (task) => task.id
+            ),
+        });
+
+      if (!result.success) {
+        console.error(
+          '[DND] ❌ Task reorder failed',
+          result.message
+        );
+
+        setColumns(previousColumns);
+
+        return;
+      }
+
+      console.log(
+        '[DND] ✅ Task reorder persisted'
+      );
     } catch (error) {
       console.error(
         '[DND] ❌ Drag persistence failed',

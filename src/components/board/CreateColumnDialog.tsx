@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { createColumnAction } from '@/app/actions';
 import { ColumnData } from '@/types/kanban';
+import { useAction } from '@/hooks/use-action';
 
 const createColumnSchema = z.object({
     title: z.string()
@@ -47,16 +48,17 @@ export function CreateColumnDialog({
     onColumnCreated,
 }: CreateColumnDialogProps) {
     const [internalOpen, setInternalOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
     const onOpenChange = controlledOnOpenChange || setInternalOpen;
 
+    // Use useAction hook for mutation handling
+    const { execute: createColumn, isPending, error, reset } = useAction(createColumnAction);
+
     const {
         register,
         handleSubmit,
-        reset,
+        reset: resetForm,
         formState: { errors },
     } = useForm<CreateColumnFormData>({
         resolver: zodResolver(createColumnSchema),
@@ -65,53 +67,35 @@ export function CreateColumnDialog({
         },
     });
 
-    // ✅ FIX: Reset form when dialog opens
-    useEffect(() => {
-        if (open) {
-            reset({ title: '' });
-        }
-    }, [open]);
-
     const onSubmit = async (data: CreateColumnFormData) => {
-        setIsLoading(true);
-        setError(null);
+        await createColumn({
+            boardId,
+            title: data.title,
+        }, {
+            onSuccess: (result) => {
+                const newColumn: ColumnData = {
+                    id: result.id,
+                    title: result.title,
+                    boardId: result.boardId,
+                    order: result.order,
+                    tasks: [],
+                };
 
-        try {
-            const result = await createColumnAction({
-                boardId,
-                title: data.title,
-            });
+                if (onColumnCreated) {
+                    onColumnCreated(newColumn);
+                }
 
-            if (!result.success) {
-                setError(result.message);
-                return;
-            }
-
-            const newColumn: ColumnData = {
-                id: result.data.id,
-                title: result.data.title,
-                boardId: result.data.boardId,
-                order: result.data.order,
-                tasks: [],
-            };
-
-            if (onColumnCreated) {
-                onColumnCreated(newColumn);
-            }
-
-            onOpenChange(false);
-            reset();
-        } catch (err) {
-            setError('An unexpected error occurred. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
+                onOpenChange(false);
+                resetForm();
+                reset();
+            },
+        });
     };
 
     const handleOpenChange = (newOpen: boolean) => {
         if (!newOpen) {
+            resetForm();
             reset();
-            setError(null);
         }
         onOpenChange(newOpen);
     };
@@ -148,7 +132,7 @@ export function CreateColumnDialog({
                                         id="title"
                                         type="text"
                                         placeholder="e.g., To Do, In Progress, Done"
-                                        disabled={isLoading}
+                                        disabled={isPending}
                                         aria-invalid={!!errors.title}
                                         {...register('title')}
                                     />
@@ -162,14 +146,14 @@ export function CreateColumnDialog({
                             <Button
                                 type="button"
                                 variant="outline"
-                                disabled={isLoading}
+                                disabled={isPending}
                             >
                                 Cancel
                             </Button>
                         </DialogClose>
-                        <Button type="submit" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isLoading ? 'Creating...' : 'Create Column'}
+                        <Button type="submit" disabled={isPending}>
+                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isPending ? 'Creating...' : 'Create Column'}
                         </Button>
                     </DialogFooter>
                 </form>

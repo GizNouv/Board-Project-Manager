@@ -5,6 +5,7 @@ import { deleteBoardAction } from '@/app/actions';
 import { ColumnData } from '@/types/kanban';
 import { useRouter } from 'next/navigation';
 import { EditBoardDialog } from './EditBoardDialog';
+import { useAction } from '@/hooks/use-action';
 
 interface BoardHeaderProps {
   title: string;
@@ -26,20 +27,20 @@ export function BoardHeader({
   onBoardDeleted,
 }: BoardHeaderProps) {
   const router = useRouter();
-  const [isDeleting, setIsDeleting] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
+  const { execute: deleteBoard, isPending: isDeleting } = useAction(deleteBoardAction)
+
   const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      const result = await deleteBoardAction({ boardId });
-      if (result.success) {
-        onBoardDeleted?.();
-        router.push('/boards');
+    await deleteBoard(
+      { boardId },
+      {
+        onSuccess: () => {
+          onBoardDeleted?.();
+          router.push('/boards');
+        }
       }
-    } finally {
-      setIsDeleting(false);
-    }
+    );
   };
 
   return (

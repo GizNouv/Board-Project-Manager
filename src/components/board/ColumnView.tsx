@@ -12,6 +12,7 @@ import { Plus } from 'lucide-react';
 import { ColumnData, TaskData } from '@/types/kanban';
 import { deleteColumnAction } from '@/app/actions';
 import { cn } from '@/lib/utils';
+import { useAction } from '@/hooks/use-action';
 
 interface ColumnViewProps {
     column: ColumnData;
@@ -22,7 +23,6 @@ interface ColumnViewProps {
     onTaskDeleted?: (taskId: string) => void;
     onColumnUpdated?: (column: ColumnData) => void;
     onColumnDeleted?: (columnId: string) => void;
-    onColumnCreated?: (column: ColumnData) => void;
 }
 
 export function ColumnView({
@@ -34,13 +34,13 @@ export function ColumnView({
     onTaskDeleted,
     onColumnUpdated,
     onColumnDeleted,
-    onColumnCreated,
 }: ColumnViewProps) {
-    const [isDeleting, setIsDeleting] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
 
     const tasks = column.tasks;
     const taskCount = tasks.length;
+
+    const { execute: deleteColumn, isPending: isDeleting } = useAction(deleteColumnAction)
 
     // Makes the column itself a drop target, so a task can be dropped
     // into empty space — including an empty column, which otherwise
@@ -57,18 +57,16 @@ export function ColumnView({
     });
 
     const handleDelete = async () => {
-        setIsDeleting(true);
-        try {
-            const result = await deleteColumnAction({
-                columnId: column.id,
-                boardId: boardId,
-            });
-            if (result.success && onColumnDeleted) {
-                onColumnDeleted(column.id);
+        await deleteColumn({
+            columnId: column.id,
+            boardId: boardId,
+        }, {
+            onSuccess: () => {
+                if (onColumnDeleted) {
+                    onColumnDeleted(column.id);
+                }
             }
-        } finally {
-            setIsDeleting(false);
-        }
+        });
     };
 
     return (

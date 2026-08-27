@@ -6,6 +6,7 @@ import { TaskData } from '@/types/kanban';
 import { TaskMenu } from './TaskMenu';
 import { EditTaskDialog } from '@/components/task/EditTaskDialog';
 import { deleteTaskAction } from '@/app/actions';
+import { useAction } from '@/hooks/use-action';
 
 interface TaskCardProps {
     task: TaskData;
@@ -16,8 +17,10 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, className, onTaskUpdated, onTaskDeleted, columnId }: TaskCardProps) {
-    const [isDeleting, setIsDeleting] = useState(false);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+    // Use useAction hook for delete mutation
+    const { execute: deleteTask, isPending: isDeleting } = useAction(deleteTaskAction);
 
     const priorityColors = {
         LOW: 'bg-green-500/10 text-green-700 dark:text-green-400',
@@ -37,18 +40,16 @@ export function TaskCard({ task, className, onTaskUpdated, onTaskDeleted, column
     };
 
     const handleDelete = async () => {
-        setIsDeleting(true);
-        try {
-            const result = await deleteTaskAction({
-                taskId: task.id,
-                columnId: columnId,
-            });
-            if (result.success && onTaskDeleted) {
-                onTaskDeleted(task.id);
-            }
-        } finally {
-            setIsDeleting(false);
-        }
+        await deleteTask({
+            taskId: task.id,
+            columnId: columnId,
+        }, {
+            onSuccess: () => {
+                if (onTaskDeleted) {
+                    onTaskDeleted(task.id);
+                }
+            },
+        });
     };
 
     return (

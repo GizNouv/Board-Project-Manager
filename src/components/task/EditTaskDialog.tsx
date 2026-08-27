@@ -28,6 +28,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { updateTaskAction } from '@/app/actions';
 import { TaskData } from '@/types/kanban';
+import { useAction } from '@/hooks/use-action';
 
 const editTaskSchema = z.object({
     title: z.string()
@@ -58,16 +59,17 @@ export function EditTaskDialog({
     onTaskUpdated
 }: EditTaskDialogProps) {
     const [internalOpen, setInternalOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
     const setOpen = controlledOnOpenChange || setInternalOpen;
 
+    // Use useAction hook for mutation handling
+    const { execute: updateTask, isPending, error, reset } = useAction(updateTaskAction);
+
     const {
         register,
         handleSubmit,
-        reset,
+        reset: resetForm,
         control,
         formState: { errors },
     } = useForm<EditTaskFormData>({
@@ -86,61 +88,50 @@ export function EditTaskDialog({
     const taskType = task.type;
 
     const onSubmit = async (data: EditTaskFormData) => {
-        setIsLoading(true);
-        setError(null);
+        await updateTask({
+            taskId: task.id,
+            columnId: task.columnId,
+            title: data.title,
+            description: data.description || '',
+            priority: data.priority,
+            estimate: {
+                value: data.estimate,
+                unit: data.estimateUnit,
+            },
+            severity: data.severity,
+            complexity: data.complexity,
+        }, {
+            onSuccess: (result) => {
+                const updatedTask: TaskData = {
+                    id: result.id,
+                    title: result.title,
+                    description: result.description,
+                    columnId: result.columnId,
+                    estimate: {
+                        value: result.estimate,
+                        unit: result.estimateUnit as 'hours' | 'days',
+                    },
+                    priority: {
+                        value: result.priority,
+                    },
+                    type: result.type,
+                    assigneeId: result.assigneeId,
+                };
 
-        try {
-            const result = await updateTaskAction({
-                taskId: task.id,
-                columnId: task.columnId,
-                title: data.title,
-                description: data.description || '',
-                priority: data.priority,
-                estimate: {
-                    value: data.estimate,
-                    unit: data.estimateUnit,
-                },
-                severity: data.severity,
-                complexity: data.complexity,
-            });
+                if (onTaskUpdated) {
+                    onTaskUpdated(updatedTask);
+                }
 
-            if (!result.success) {
-                setError(result.message);
-                return;
-            }
-
-            const updatedTask: TaskData = {
-                id: result.data.id,
-                title: result.data.title,
-                description: result.data.description,
-                columnId: result.data.columnId,
-                estimate: {
-                    value: result.data.estimate,
-                    unit: result.data.estimateUnit as 'hours' | 'days',
-                },
-                priority: {
-                    value: result.data.priority,
-                },
-                type: result.data.type,
-                assigneeId: result.data.assigneeId,
-            };
-
-            if (onTaskUpdated) {
-                onTaskUpdated(updatedTask);
-            }
-
-            setOpen(false);
-        } catch (err) {
-            setError('An unexpected error occurred. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
+                setOpen(false);
+                reset();
+            },
+        });
     };
 
     const handleOpenChange = (newOpen: boolean) => {
         if (!newOpen) {
+            resetForm();
             reset();
-            setError(null);
         }
         setOpen(newOpen);
     };
@@ -170,9 +161,9 @@ export function EditTaskDialog({
                                         id="edit-title"
                                         type="text"
                                         placeholder="Enter task title"
-                                        disabled={isLoading}
+                                        disabled={isPending}
                                         aria-invalid={!!errors.title}
-                                        {...register('title')}  
+                                        {...register('title')}
                                     />
                                 </FieldContent>
                                 {errors.title && <FieldError>{errors.title.message}</FieldError>}
@@ -186,7 +177,7 @@ export function EditTaskDialog({
                                     <Textarea
                                         id="edit-description"
                                         placeholder="Enter task description (optional)"
-                                        disabled={isLoading}
+                                        disabled={isPending}
                                         aria-invalid={!!errors.description}
                                         {...register('description')}
                                     />
@@ -204,14 +195,14 @@ export function EditTaskDialog({
                                         control={control}
                                         render={({ field }) => (
                                             <Select
-                                                disabled={isLoading}
+                                                disabled={isPending}
                                                 value={field.value}
                                                 onValueChange={field.onChange}
                                             >
                                                 <SelectTrigger
                                                     id="edit-priority"
-                                                    
-                                                
+
+
                                                 >
                                                     <SelectValue placeholder="Select priority" />
                                                 </SelectTrigger>
@@ -239,7 +230,7 @@ export function EditTaskDialog({
                                             type="number"
                                             min="0"
                                             step="0.5"
-                                            disabled={isLoading}
+                                            disabled={isPending}
                                             aria-invalid={!!errors.estimate}
                                             {...register('estimate', { valueAsNumber: true })}
                                         />
@@ -257,14 +248,14 @@ export function EditTaskDialog({
                                             control={control}
                                             render={({ field }) => (
                                                 <Select
-                                                    disabled={isLoading}
+                                                    disabled={isPending}
                                                     value={field.value}
                                                     onValueChange={field.onChange}
                                                 >
                                                     <SelectTrigger
                                                         id="edit-estimateUnit"
-                                                        
-                                                    
+
+
                                                     >
                                                         <SelectValue placeholder="Select unit" />
                                                     </SelectTrigger>
@@ -291,14 +282,14 @@ export function EditTaskDialog({
                                             control={control}
                                             render={({ field }) => (
                                                 <Select
-                                                    disabled={isLoading}
+                                                    disabled={isPending}
                                                     value={field.value}
                                                     onValueChange={field.onChange}
                                                 >
                                                     <SelectTrigger
                                                         id="edit-severity"
-                                                        
-                                                    
+
+
                                                     >
                                                         <SelectValue placeholder="Select severity" />
                                                     </SelectTrigger>
@@ -326,7 +317,7 @@ export function EditTaskDialog({
                                             control={control}
                                             render={({ field }) => (
                                                 <Select
-                                                    disabled={isLoading}
+                                                    disabled={isPending}
                                                     value={field.value}
                                                     onValueChange={field.onChange}
                                                 >
@@ -354,14 +345,14 @@ export function EditTaskDialog({
                             <Button
                                 type="button"
                                 variant="outline"
-                                disabled={isLoading}
+                                disabled={isPending}
                             >
                                 Cancel
                             </Button>
                         </DialogClose>
-                        <Button type="submit" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isLoading ? 'Saving...' : 'Save Changes'}
+                        <Button type="submit" disabled={isPending}>
+                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isPending ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </DialogFooter>
                 </form>

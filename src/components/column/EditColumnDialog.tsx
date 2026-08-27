@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { updateColumnAction } from '@/app/actions';
 import { ColumnData } from '@/types/kanban';
+import { useAction } from '@/hooks/use-action';
 
 const editColumnSchema = z.object({
     title: z.string()
@@ -46,17 +47,17 @@ export function EditColumnDialog({
     onColumnUpdated
 }: EditColumnDialogProps) {
     const [internalOpen, setInternalOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const hasInitializedRef = useRef(false);
 
     const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
     const onOpenChange = controlledOnOpenChange || setInternalOpen;
 
+    // Use useAction hook for mutation handling
+    const { execute: updateColumn, isPending, error, reset } = useAction(updateColumnAction);
+
     const {
         register,
         handleSubmit,
-        reset,
+        reset: resetForm,
         formState: { errors },
     } = useForm<EditColumnFormData>({
         resolver: zodResolver(editColumnSchema),
@@ -65,57 +66,45 @@ export function EditColumnDialog({
         },
     });
 
-    // ✅ FIX: Only reset when dialog opens, NOT on every render
+    // Reset form when dialog opens
     useEffect(() => {
         if (open) {
-            reset({ title: column.title });
+            resetForm({ title: column.title });
         }
-    }, [open]); // ✅ Removed column.title from dependencies
+    }, [open]);
 
     const onSubmit = async (data: EditColumnFormData) => {
-        setIsLoading(true);
-        setError(null);
+        await updateColumn({
+            columnId: column.id,
+            boardId: boardId,
+            title: data.title,
+        }, {
+            onSuccess: (result) => {
+                const updatedColumn: ColumnData = {
+                    id: result.id,
+                    title: result.title,
+                    boardId: result.boardId,
+                    order: result.order,
+                    tasks: column.tasks,
+                };
 
-        try {
-            const result = await updateColumnAction({
-                columnId: column.id,
-                boardId: boardId,
-                title: data.title,
-            });
+                if (onColumnUpdated) {
+                    onColumnUpdated(updatedColumn);
+                }
 
-            if (!result.success) {
-                setError(result.message);
-                return;
-            }
-
-            const updatedColumn: ColumnData = {
-                id: result.data.id,
-                title: result.data.title,
-                boardId: result.data.boardId,
-                order: result.data.order,
-                tasks: column.tasks,
-            };
-
-            if (onColumnUpdated) {
-                onColumnUpdated(updatedColumn);
-            }
-
-            onOpenChange(false);
-        } catch (err) {
-            setError('An unexpected error occurred. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
+                onOpenChange(false);
+                reset();
+            },
+        });
     };
 
     const handleOpenChange = (newOpen: boolean) => {
         if (!newOpen) {
+            resetForm();
             reset();
-            setError(null);
         }
         onOpenChange(newOpen);
     };
-
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="sm:max-w-md">
@@ -141,7 +130,7 @@ export function EditColumnDialog({
                                         id="edit-column-title"
                                         type="text"
                                         placeholder="Enter column name"
-                                        disabled={isLoading}
+                                        disabled={isPending}
                                         aria-invalid={!!errors.title}
                                         {...register('title')}
                                     />
@@ -155,14 +144,14 @@ export function EditColumnDialog({
                             <Button
                                 type="button"
                                 variant="outline"
-                                disabled={isLoading}
+                                disabled={isPending}
                             >
                                 Cancel
                             </Button>
                         </DialogClose>
-                        <Button type="submit" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isLoading ? 'Saving...' : 'Save Changes'}
+                        <Button type="submit" disabled={isPending}>
+                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isPending ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </DialogFooter>
                 </form>

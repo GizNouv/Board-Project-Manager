@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { updateBoardAction } from '@/app/actions';
 import { BoardData } from '@/types/kanban';
+import { useAction } from '@/hooks/use-action';
 
 const editBoardSchema = z.object({
     title: z.string()
@@ -50,16 +51,17 @@ export function EditBoardDialog({
     onBoardUpdated
 }: EditBoardDialogProps) {
     const [internalOpen, setInternalOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
     const onOpenChange = controlledOnOpenChange || setInternalOpen;
 
+    // Use useAction hook for mutation handling
+    const { execute: updateBoard, isPending, error, reset } = useAction(updateBoardAction);
+
     const {
         register,
         handleSubmit,
-        reset,
+        reset: resetForm,
         formState: { errors },
     } = useForm<EditBoardFormData>({
         resolver: zodResolver(editBoardSchema),
@@ -69,45 +71,34 @@ export function EditBoardDialog({
     });
 
     useEffect(() => {
-        reset({
+        resetForm({
             title: board.title,
         });
-    }, [board, reset]);
+    }, [board, resetForm]);
 
     const onSubmit = async (data: EditBoardFormData) => {
-        setIsLoading(true);
-        setError(null);
+        await updateBoard({
+            boardId: board.id,
+            title: data.title,
+        }, {
+            onSuccess: (result) => {
+                if (onBoardUpdated) {
+                    onBoardUpdated({
+                        id: result.id,
+                        title: result.title,
+                    });
+                }
 
-        try {
-            const result = await updateBoardAction({
-                boardId: board.id,
-                title: data.title,
-            });
-
-            if (!result.success) {
-                setError(result.message);
-                return;
-            }
-
-            if (onBoardUpdated) {
-                onBoardUpdated({
-                    id: result.data.id,
-                    title: result.data.title,
-                });
-            }
-
-            onOpenChange(false);
-        } catch (err) {
-            setError('An unexpected error occurred. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
+                onOpenChange(false);
+                reset();
+            },
+        });
     };
 
     const handleOpenChange = (newOpen: boolean) => {
         if (!newOpen) {
+            resetForm();
             reset();
-            setError(null);
         }
         onOpenChange(newOpen);
     };
@@ -149,7 +140,7 @@ export function EditBoardDialog({
                                         id="edit-board-title"
                                         type="text"
                                         placeholder="Enter board name"
-                                        disabled={isLoading}
+                                        disabled={isPending}
                                         aria-invalid={!!errors.title}
                                         {...register('title')}
                                     />
@@ -163,14 +154,14 @@ export function EditBoardDialog({
                             <Button
                                 type="button"
                                 variant="outline"
-                                disabled={isLoading}
+                                disabled={isPending}
                             >
                                 Cancel
                             </Button>
                         </DialogClose>
-                        <Button type="submit" disabled={isLoading}>
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isLoading ? 'Saving...' : 'Save Changes'}
+                        <Button type="submit" disabled={isPending}>
+                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isPending ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </DialogFooter>
                 </form>
