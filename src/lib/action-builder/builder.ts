@@ -57,12 +57,20 @@ export const createAction: CreateAction = <TInput, TOutput>(
 
       // Return the action function
       return async (input: TInput): Promise<ActionResult<TOutput>> => {
-        const context: ActionContext<TInput> = {
-          input,
-          session: null, // Will be populated by withAuth if used
-        };
+        try {
+          const context: ActionContext<TInput> = {
+            input,
+            session: null,
+          };
 
-        return composedHandler(context);
+          return await composedHandler(context);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+          return {
+            success: false,
+            message,
+          };
+        }
       };
     },
   };
