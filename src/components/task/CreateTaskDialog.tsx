@@ -30,6 +30,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { createTaskAction } from '@/app/actions';
 import { TaskData } from '@/types/kanban';
 import { useAction } from '@/hooks/use-action';
+import { TaskMapper } from '@/lib/mappers';
 
 const createTaskSchema = z.object({
     title: z.string()
@@ -84,21 +85,7 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
             type: 'FEATURE'
         }, {
             onSuccess: (result) => {
-                const taskData: TaskData = {
-                    id: result.id,
-                    title: result.title,
-                    description: result.description,
-                    columnId: result.columnId,
-                    estimate: {
-                        value: result.estimate,
-                        unit: result.estimateUnit as 'hours' | 'days',
-                    },
-                    priority: {
-                        value: result.priority,
-                    },
-                    type: result.type,
-                    assigneeId: result.assigneeId,
-                };
+                const taskData: TaskData = TaskMapper.toTaskData(result)
 
                 if (onTaskCreated) {
                     onTaskCreated(taskData);

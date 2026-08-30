@@ -6,7 +6,7 @@ import { isSortable } from '@dnd-kit/react/sortable';
 
 import { SortableColumn } from './SortableColumn';
 
-import { ColumnData, TaskData } from '@/types/kanban';
+import { BoardData, ColumnData, TaskData } from '@/types/kanban';
 
 import {
   reorderColumnsAction,
@@ -22,11 +22,7 @@ import { AutoScroller } from '@dnd-kit/dom';
 import { useAction } from '@/hooks/use-action';
 
 interface BoardViewProps {
-  board: {
-    id: string;
-    title: string;
-    columns: ColumnData[];
-  };
+  board: BoardData;
   className?: string;
   onColumnCreated?: (column: ColumnData) => void;
 }

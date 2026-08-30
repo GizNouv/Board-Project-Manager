@@ -21,6 +21,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { updateColumnAction } from '@/app/actions';
 import { ColumnData } from '@/types/kanban';
 import { useAction } from '@/hooks/use-action';
+import { ColumnMapper } from '@/lib/mappers';
 
 const editColumnSchema = z.object({
     title: z.string()
@@ -80,13 +81,7 @@ export function EditColumnDialog({
             title: data.title,
         }, {
             onSuccess: (result) => {
-                const updatedColumn: ColumnData = {
-                    id: result.id,
-                    title: result.title,
-                    boardId: result.boardId,
-                    order: result.order,
-                    tasks: column.tasks,
-                };
+                const updatedColumn: ColumnData = ColumnMapper.toColumnData(result, column.tasks);;
 
                 if (onColumnUpdated) {
                     onColumnUpdated(updatedColumn);

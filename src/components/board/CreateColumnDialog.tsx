@@ -22,6 +22,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { createColumnAction } from '@/app/actions';
 import { ColumnData } from '@/types/kanban';
 import { useAction } from '@/hooks/use-action';
+import { ColumnMapper } from '@/lib/mappers';
 
 const createColumnSchema = z.object({
     title: z.string()
@@ -73,13 +74,7 @@ export function CreateColumnDialog({
             title: data.title,
         }, {
             onSuccess: (result) => {
-                const newColumn: ColumnData = {
-                    id: result.id,
-                    title: result.title,
-                    boardId: result.boardId,
-                    order: result.order,
-                    tasks: [],
-                };
+                const newColumn: ColumnData = ColumnMapper.toColumnData(result);
 
                 if (onColumnCreated) {
                     onColumnCreated(newColumn);
