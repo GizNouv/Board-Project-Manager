@@ -40,7 +40,6 @@ interface TaskDragSession {
 export function BoardView({
   board: initialBoard,
   className,
-  onColumnCreated,
 }: BoardViewProps) {
 
   // Use useAction hooks for mutations
@@ -1127,9 +1126,6 @@ export function BoardView({
                 }
                 onColumnDeleted={
                   handleColumnDeleted
-                }
-                onColumnCreated={
-                  onColumnCreated
                 }
               />
             )

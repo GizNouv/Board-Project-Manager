@@ -25,7 +25,6 @@ export function SortableColumn({
   onTaskDeleted,
   onColumnUpdated,
   onColumnDeleted,
-  onColumnCreated,
 }: SortableColumnProps) {
   // Columns are a single implicit group (no `group` option needed —
   // there's only one row of columns), separate `type`/`accept` so
@@ -52,7 +51,6 @@ export function SortableColumn({
         onTaskDeleted={onTaskDeleted}
         onColumnUpdated={onColumnUpdated}
         onColumnDeleted={onColumnDeleted}
-        onColumnCreated={onColumnCreated}
       />
     </div>
   );

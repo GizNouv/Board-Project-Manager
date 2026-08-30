@@ -5,7 +5,6 @@ import { BoardView } from '@/components/board/BoardView';
 import { BoardHeader } from '@/components/board/BoardHeader';
 import { BoardData } from '@/types/kanban';
 import { EmptyColumnState } from '@/components/board/EmptyColumnState';
-import { useBoardStore } from '@/stores/boardStore';
 
 interface BoardClientProps {
     board: BoardData;
@@ -14,7 +13,6 @@ interface BoardClientProps {
 
 export function BoardClient({ board: initialBoard, boardId }: BoardClientProps) {
     const [board, setBoard] = useState<BoardData>(initialBoard);
-    const { setColumns } = useBoardStore()
 
     const handleBoardUpdated = useCallback((updatedBoard: { id: string; title: string }) => {
         setBoard((prev) => ({
@@ -24,14 +22,14 @@ export function BoardClient({ board: initialBoard, boardId }: BoardClientProps) 
     }, []);
 
     const handleColumnCreated = useCallback((newColumn: any) => {
-        setColumns((prevCols) => {
-            if(prevCols.length > 0) {
-                const updatedCols = [...prevCols, newColumn]
-                return updatedCols
+        setBoard((prevCols) => {
+            if(prevCols.columns.length > 0) {
+                const updatedCols = [...prevCols.columns, newColumn]
+                return {...prevCols, columns: updatedCols}
             }
-            return [newColumn]
+            return {...prevCols, columns: newColumn}
         });
-    }, [setColumns]);
+    }, [setBoard]);
 
     const handleColumnDeleted = useCallback((columnId: string) => {
         setBoard((prev) => ({
@@ -43,7 +41,7 @@ export function BoardClient({ board: initialBoard, boardId }: BoardClientProps) 
     const handleBoardDeleted = useCallback(() => {
         // The router will handle navigation
     }, []);
-
+    
     const hasColumns = initialBoard.columns && initialBoard.columns.length > 0;
 
     return (
