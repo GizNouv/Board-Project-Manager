@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Pencil } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -20,7 +20,6 @@ import { Field, FieldLabel, FieldContent, FieldError, FieldGroup } from '@/compo
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { updateBoardAction } from '@/app/actions';
-import { BoardData } from '@/types/kanban';
 import { useAction } from '@/hooks/use-action';
 
 const editBoardSchema = z.object({
@@ -40,7 +39,6 @@ interface EditBoardDialogProps {
     trigger?: React.ReactNode;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
-    onBoardUpdated?: (board: { id: string; title: string }) => void;
 }
 
 export function EditBoardDialog({
@@ -48,7 +46,6 @@ export function EditBoardDialog({
     trigger,
     open: controlledOpen,
     onOpenChange: controlledOnOpenChange,
-    onBoardUpdated
 }: EditBoardDialogProps) {
     const [internalOpen, setInternalOpen] = useState(false);
 
@@ -82,13 +79,6 @@ export function EditBoardDialog({
             title: data.title,
         }, {
             onSuccess: (result) => {
-                if (onBoardUpdated) {
-                    onBoardUpdated({
-                        id: result.id,
-                        title: result.title,
-                    });
-                }
-
                 onOpenChange(false);
                 reset();
             },

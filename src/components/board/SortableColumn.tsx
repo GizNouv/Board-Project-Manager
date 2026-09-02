@@ -1,30 +1,19 @@
 'use client';
 
 import { useSortable } from '@dnd-kit/react/sortable';
-import { ColumnData, TaskData } from '@/types/kanban';
+import { ColumnData } from '@/types/kanban';
 import { ColumnView } from './ColumnView';
 
 interface SortableColumnProps {
   column: ColumnData;
   index: number;
   boardId: string;
-  onTaskCreated?: (task: TaskData) => void;
-  onTaskUpdated?: (task: TaskData) => void;
-  onTaskDeleted?: (taskId: string) => void;
-  onColumnUpdated?: (column: ColumnData) => void;
-  onColumnDeleted?: (columnId: string) => void;
-  onColumnCreated?: (column: ColumnData) => void;
 }
 
 export function SortableColumn({
   column,
   index,
-  boardId,
-  onTaskCreated,
-  onTaskUpdated,
-  onTaskDeleted,
-  onColumnUpdated,
-  onColumnDeleted,
+  boardId
 }: SortableColumnProps) {
   // Columns are a single implicit group (no `group` option needed —
   // there's only one row of columns), separate `type`/`accept` so
@@ -46,11 +35,6 @@ export function SortableColumn({
       <ColumnView
         column={column}
         boardId={boardId}
-        onTaskCreated={onTaskCreated}
-        onTaskUpdated={onTaskUpdated}
-        onTaskDeleted={onTaskDeleted}
-        onColumnUpdated={onColumnUpdated}
-        onColumnDeleted={onColumnDeleted}
       />
     </div>
   );

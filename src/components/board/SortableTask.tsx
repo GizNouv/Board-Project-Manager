@@ -8,11 +8,9 @@ interface SortableTaskProps {
     task: TaskData;
     columnId: string;
     index: number;
-    onTaskUpdated?: (task: TaskData) => void;
-    onTaskDeleted?: (taskId: string) => void;
 }
 
-export function SortableTask({ task, columnId, index, onTaskUpdated, onTaskDeleted }: SortableTaskProps) {
+export function SortableTask({ task, columnId, index }: SortableTaskProps) {
     // `group: columnId` is what makes this sortable across columns, not
     // just within one — items sharing a group can be reordered among
     // themselves (see dnd-kit's "Multiple sortable lists" guide).
@@ -34,8 +32,6 @@ export function SortableTask({ task, columnId, index, onTaskUpdated, onTaskDelet
             <TaskCard
                 task={task}
                 columnId={columnId}
-                onTaskUpdated={onTaskUpdated}
-                onTaskDeleted={onTaskDeleted}
             />
         </div>
     );

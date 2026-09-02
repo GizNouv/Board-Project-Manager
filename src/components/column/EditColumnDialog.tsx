@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,6 +22,7 @@ import { updateColumnAction } from '@/app/actions';
 import { ColumnData } from '@/types/kanban';
 import { useAction } from '@/hooks/use-action';
 import { ColumnMapper } from '@/lib/mappers';
+import { useBoardLogic } from '@/hooks/useBoardLogic';
 
 const editColumnSchema = z.object({
     title: z.string()
@@ -37,7 +38,6 @@ interface EditColumnDialogProps {
     boardId: string;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
-    onColumnUpdated?: (column: ColumnData) => void;
 }
 
 export function EditColumnDialog({
@@ -45,7 +45,6 @@ export function EditColumnDialog({
     boardId,
     open: controlledOpen,
     onOpenChange: controlledOnOpenChange,
-    onColumnUpdated
 }: EditColumnDialogProps) {
     const [internalOpen, setInternalOpen] = useState(false);
 
@@ -54,6 +53,9 @@ export function EditColumnDialog({
 
     // Use useAction hook for mutation handling
     const { execute: updateColumn, isPending, error, reset } = useAction(updateColumnAction);
+
+    // useBoardLogic for state update logic
+    const { handleColumnUpdated } = useBoardLogic();
 
     const {
         register,
@@ -82,11 +84,7 @@ export function EditColumnDialog({
         }, {
             onSuccess: (result) => {
                 const updatedColumn: ColumnData = ColumnMapper.toColumnData(result, column.tasks);;
-
-                if (onColumnUpdated) {
-                    onColumnUpdated(updatedColumn);
-                }
-
+                handleColumnUpdated(updatedColumn);
                 onOpenChange(false);
                 reset();
             },

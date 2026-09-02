@@ -30,6 +30,7 @@ import { updateTaskAction } from '@/app/actions';
 import { TaskData } from '@/types/kanban';
 import { useAction } from '@/hooks/use-action';
 import { TaskMapper } from '@/lib/mappers';
+import { useBoardLogic } from '@/hooks/useBoardLogic';
 
 const editTaskSchema = z.object({
     title: z.string()
@@ -50,14 +51,12 @@ interface EditTaskDialogProps {
     task: TaskData;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
-    onTaskUpdated?: (task: TaskData) => void;
 }
 
 export function EditTaskDialog({
     task,
     open: controlledOpen,
     onOpenChange: controlledOnOpenChange,
-    onTaskUpdated
 }: EditTaskDialogProps) {
     const [internalOpen, setInternalOpen] = useState(false);
 
@@ -66,6 +65,9 @@ export function EditTaskDialog({
 
     // Use useAction hook for mutation handling
     const { execute: updateTask, isPending, error, reset } = useAction(updateTaskAction);
+
+    // useBoardLogic for state update logic
+    const { handleTaskUpdated } = useBoardLogic();
 
     const {
         register,
@@ -104,11 +106,7 @@ export function EditTaskDialog({
         }, {
             onSuccess: (result) => {
                 const updatedTask: TaskData = TaskMapper.toTaskData(result)
-
-                if (onTaskUpdated) {
-                    onTaskUpdated(updatedTask);
-                }
-
+                handleTaskUpdated(updatedTask);
                 setOpen(false);
                 reset();
             },

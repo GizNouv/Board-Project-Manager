@@ -9,31 +9,22 @@ import { EditColumnDialog } from '@/components/column/EditColumnDialog';
 import { ColumnMenu } from './ColumnMenu';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { ColumnData, TaskData } from '@/types/kanban';
+import { ColumnData } from '@/types/kanban';
 import { deleteColumnAction } from '@/app/actions';
 import { cn } from '@/lib/utils';
 import { useAction } from '@/hooks/use-action';
+import { useBoardLogic } from '@/hooks/useBoardLogic';
 
 interface ColumnViewProps {
     column: ColumnData;
     boardId: string;
     className?: string;
-    onTaskCreated?: (task: TaskData) => void;
-    onTaskUpdated?: (task: TaskData) => void;
-    onTaskDeleted?: (taskId: string) => void;
-    onColumnUpdated?: (column: ColumnData) => void;
-    onColumnDeleted?: (columnId: string) => void;
 }
 
 export function ColumnView({
     column,
     boardId,
     className,
-    onTaskCreated,
-    onTaskUpdated,
-    onTaskDeleted,
-    onColumnUpdated,
-    onColumnDeleted,
 }: ColumnViewProps) {
     const [editDialogOpen, setEditDialogOpen] = useState(false);
 
@@ -41,6 +32,8 @@ export function ColumnView({
     const taskCount = tasks.length;
 
     const { execute: deleteColumn, isPending: isDeleting } = useAction(deleteColumnAction)
+
+    const { handleColumnDeleted } = useBoardLogic()
 
     // Makes the column itself a drop target, so a task can be dropped
     // into empty space — including an empty column, which otherwise
@@ -62,9 +55,7 @@ export function ColumnView({
             boardId: boardId,
         }, {
             onSuccess: () => {
-                if (onColumnDeleted) {
-                    onColumnDeleted(column.id);
-                }
+                handleColumnDeleted(column.id);
             }
         });
     };
@@ -99,7 +90,6 @@ export function ColumnView({
                             <p className="text-sm text-muted-foreground">No tasks yet</p>
                             <CreateTaskDialog
                                 columnId={column.id}
-                                onTaskCreated={onTaskCreated}
                                 trigger={
                                     <Button variant="ghost" size="sm" className="mt-2 text-muted-foreground">
                                         <Plus className="mr-2 h-4 w-4" />
@@ -115,8 +105,6 @@ export function ColumnView({
                                 task={task}
                                 columnId={column.id}
                                 index={index}
-                                onTaskUpdated={onTaskUpdated}
-                                onTaskDeleted={onTaskDeleted}
                             />
                         ))
                     )}
@@ -127,7 +115,6 @@ export function ColumnView({
                     boardId={boardId}
                     open={editDialogOpen}
                     onOpenChange={setEditDialogOpen}
-                    onColumnUpdated={onColumnUpdated}
                 />
             </div>
             {
@@ -136,7 +123,6 @@ export function ColumnView({
                 <CardFooter>
                     <CreateTaskDialog
                         columnId={column.id}
-                        onTaskCreated={onTaskCreated}
                         trigger={
                             <Button variant="ghost" size="sm" className="w-full justify-center text-muted-foreground">
                                 <Plus className="mr-2 h-4 w-4" />

@@ -31,6 +31,7 @@ import { createTaskAction } from '@/app/actions';
 import { TaskData } from '@/types/kanban';
 import { useAction } from '@/hooks/use-action';
 import { TaskMapper } from '@/lib/mappers';
+import { useBoardLogic } from '@/hooks/useBoardLogic';
 
 const createTaskSchema = z.object({
     title: z.string()
@@ -48,14 +49,16 @@ type CreateTaskFormData = z.infer<typeof createTaskSchema>;
 interface CreateTaskDialogProps {
     columnId: string;
     trigger?: React.ReactNode;
-    onTaskCreated?: (task: TaskData) => void;
 }
 
-export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTaskDialogProps) {
+export function CreateTaskDialog({ columnId, trigger }: CreateTaskDialogProps) {
     const [open, setOpen] = useState(false);
 
     // Use useAction hook for mutation handling
     const { execute: createTask, isPending, error, reset } = useAction(createTaskAction);
+
+    // useBoardLogic for state update logic
+    const { handleTaskCreated } = useBoardLogic();
 
     const {
         register,
@@ -86,11 +89,7 @@ export function CreateTaskDialog({ columnId, trigger, onTaskCreated }: CreateTas
         }, {
             onSuccess: (result) => {
                 const taskData: TaskData = TaskMapper.toTaskData(result)
-
-                if (onTaskCreated) {
-                    onTaskCreated(taskData);
-                }
-
+                handleTaskCreated(taskData);
                 setOpen(false);
                 resetForm();
                 reset();

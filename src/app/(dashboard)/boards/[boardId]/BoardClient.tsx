@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useEffect } from 'react';
 import { BoardView } from '@/components/board/BoardView';
 import { BoardHeader } from '@/components/board/BoardHeader';
 import { BoardData } from '@/types/kanban';
 import { EmptyColumnState } from '@/components/board/EmptyColumnState';
+import { useBoardStore } from '@/stores/boardStore';
+import { ColumnData } from '@/types/kanban';
 
 interface BoardClientProps {
     board: BoardData;
@@ -12,51 +14,35 @@ interface BoardClientProps {
 }
 
 export function BoardClient({ board: initialBoard, boardId }: BoardClientProps) {
-    const [board, setBoard] = useState<BoardData>(initialBoard);
+    const setColumns = useBoardStore((state) => state.setColumns);
+    const setBoardId = useBoardStore((state) => state.setBoardId);
 
-    const handleBoardUpdated = useCallback((updatedBoard: { id: string; title: string }) => {
-        setBoard((prev) => ({
-            ...prev,
-            title: updatedBoard.title,
-        }));
-    }, []);
+    // Initialize store on mount
+    useEffect(() => {
+        const currentBoardId = useBoardStore.getState().boardId;
+        if (currentBoardId !== boardId) {
+            const columnsRecord = initialBoard.columns.reduce((acc, col) => {
+                acc[col.id] = col;
+                return acc;
+            }, {} as Record<string, ColumnData>);
 
-    const handleColumnCreated = useCallback((newColumn: any) => {
-        setBoard((prevCols) => {
-            if(prevCols.columns.length > 0) {
-                const updatedCols = [...prevCols.columns, newColumn]
-                return {...prevCols, columns: updatedCols}
-            }
-            return {...prevCols, columns: newColumn}
-        });
-    }, [setBoard]);
+            setColumns(columnsRecord, initialBoard.columns.map((col) => col.id));
+            setBoardId(boardId);
+        }
+    }, [boardId, initialBoard, setColumns, setBoardId]);
 
-    const handleColumnDeleted = useCallback((columnId: string) => {
-        setBoard((prev) => ({
-            ...prev,
-            columns: prev.columns.filter((col) => col.id !== columnId),
-        }));
-    }, []);
-
-    const handleBoardDeleted = useCallback(() => {
-        // The router will handle navigation
-    }, []);
-    
-    const hasColumns = initialBoard.columns && initialBoard.columns.length > 0;
+    const hasColumns = initialBoard.columns.length > 0;
 
     return (
         <div className="space-y-6">
             <BoardHeader
-                title={board.title}
+                title={initialBoard.title}
                 boardId={boardId}
-                updatedAt={board.updatedAt}
-                onColumnCreated={handleColumnCreated}
-                onBoardUpdated={handleBoardUpdated}
-                onBoardDeleted={handleBoardDeleted}
+                updatedAt={initialBoard.updatedAt}
             />
 
             {hasColumns ? (
-                <BoardView board={board} />
+                <BoardView />
             ) : (
                 <EmptyColumnState boardId={boardId} />
             )}

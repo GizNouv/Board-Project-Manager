@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -23,6 +23,7 @@ import { createColumnAction } from '@/app/actions';
 import { ColumnData } from '@/types/kanban';
 import { useAction } from '@/hooks/use-action';
 import { ColumnMapper } from '@/lib/mappers';
+import { useBoardLogic } from '@/hooks/useBoardLogic';
 
 const createColumnSchema = z.object({
     title: z.string()
@@ -38,7 +39,6 @@ interface CreateColumnDialogProps {
     trigger?: React.ReactNode;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
-    onColumnCreated?: (column: ColumnData) => void;
 }
 
 export function CreateColumnDialog({
@@ -46,7 +46,6 @@ export function CreateColumnDialog({
     trigger,
     open: controlledOpen,
     onOpenChange: controlledOnOpenChange,
-    onColumnCreated,
 }: CreateColumnDialogProps) {
     const [internalOpen, setInternalOpen] = useState(false);
 
@@ -55,6 +54,9 @@ export function CreateColumnDialog({
 
     // Use useAction hook for mutation handling
     const { execute: createColumn, isPending, error, reset } = useAction(createColumnAction);
+
+    // useBoardLogic for state update logic
+    const { handleColumnCreated } = useBoardLogic();
 
     const {
         register,
@@ -75,11 +77,7 @@ export function CreateColumnDialog({
         }, {
             onSuccess: (result) => {
                 const newColumn: ColumnData = ColumnMapper.toColumnData(result);
-
-                if (onColumnCreated) {
-                    onColumnCreated(newColumn);
-                }
-
+                handleColumnCreated(newColumn);
                 onOpenChange(false);
                 resetForm();
                 reset();

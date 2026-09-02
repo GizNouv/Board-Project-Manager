@@ -1,20 +1,16 @@
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { CreateColumnDialog } from './CreateColumnDialog';
 import { BoardMenu } from './BoardMenu';
-import { deleteBoardAction } from '@/app/actions';
-import { ColumnData } from '@/types/kanban';
-import { useRouter } from 'next/navigation';
 import { EditBoardDialog } from './EditBoardDialog';
 import { useAction } from '@/hooks/use-action';
+import { deleteBoardAction } from '@/app/actions';
 
 interface BoardHeaderProps {
   title: string;
   boardId: string;
   updatedAt?: string;
   className?: string;
-  onColumnCreated?: (column: ColumnData) => void;
-  onBoardUpdated?: (board: { id: string; title: string }) => void;
-  onBoardDeleted?: () => void;
 }
 
 export function BoardHeader({
@@ -22,21 +18,18 @@ export function BoardHeader({
   boardId,
   updatedAt,
   className,
-  onColumnCreated,
-  onBoardUpdated,
-  onBoardDeleted,
 }: BoardHeaderProps) {
   const router = useRouter();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  const { execute: deleteBoard, isPending: isDeleting } = useAction(deleteBoardAction)
+  // useAction for delete mutation (loading/error states)
+  const { execute: deleteBoard, isPending: isDeleting } = useAction(deleteBoardAction);
 
   const handleDelete = async () => {
     await deleteBoard(
       { boardId },
       {
         onSuccess: () => {
-          onBoardDeleted?.();
           router.push('/boards');
         }
       }
@@ -62,7 +55,6 @@ export function BoardHeader({
         <div className='flex gap-2 items-center'>
           <CreateColumnDialog
             boardId={boardId}
-            onColumnCreated={onColumnCreated}
           />
           <BoardMenu
             boardId={boardId}
@@ -78,7 +70,6 @@ export function BoardHeader({
         board={{ id: boardId, title }}
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
-        onBoardUpdated={onBoardUpdated}
       />
     </div>
   );

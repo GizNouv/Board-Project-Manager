@@ -7,20 +7,21 @@ import { TaskMenu } from './TaskMenu';
 import { EditTaskDialog } from '@/components/task/EditTaskDialog';
 import { deleteTaskAction } from '@/app/actions';
 import { useAction } from '@/hooks/use-action';
+import { useBoardLogic } from '@/hooks/useBoardLogic';
 
 interface TaskCardProps {
     task: TaskData;
     className?: string;
-    onTaskUpdated?: (task: TaskData) => void;
-    onTaskDeleted?: (taskId: string) => void;
     columnId: string;
 }
 
-export function TaskCard({ task, className, onTaskUpdated, onTaskDeleted, columnId }: TaskCardProps) {
+export function TaskCard({ task, className, columnId }: TaskCardProps) {
     const [editDialogOpen, setEditDialogOpen] = useState(false);
 
     // Use useAction hook for delete mutation
     const { execute: deleteTask, isPending: isDeleting } = useAction(deleteTaskAction);
+
+    const { handleTaskDeleted } = useBoardLogic()
 
     const priorityColors = {
         LOW: 'bg-green-500/10 text-green-700 dark:text-green-400',
@@ -45,9 +46,7 @@ export function TaskCard({ task, className, onTaskUpdated, onTaskDeleted, column
             columnId: columnId,
         }, {
             onSuccess: () => {
-                if (onTaskDeleted) {
-                    onTaskDeleted(task.id);
-                }
+                handleTaskDeleted(task.id, columnId);
             },
         });
     };
@@ -111,7 +110,6 @@ export function TaskCard({ task, className, onTaskUpdated, onTaskDeleted, column
                 task={task}
                 open={editDialogOpen}
                 onOpenChange={setEditDialogOpen}
-                onTaskUpdated={onTaskUpdated}
             />
         </>
     );
