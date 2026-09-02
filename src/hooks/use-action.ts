@@ -1,10 +1,13 @@
 import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import { ActionResult } from '@/lib/action-builder';
 
 interface UseActionOptions<TInput, TOutput> {
     onSuccess?: (data: TOutput) => void;
     onError?: (error: string) => void;
     onSettled?: () => void;
+    successMessage?: string;
+    errorMessage?: string;
 }
 
 export function useAction<TInput, TOutput>(
@@ -25,16 +28,32 @@ export function useAction<TInput, TOutput>(
                 if (result.success) {
                     setData(result.data);
                     options?.onSuccess?.(result.data);
+
+                    // Sonner success toast
+                    toast.success(
+                        options?.successMessage || 'Operation completed successfully'
+                    );
+
                     return result;
                 } else {
                     setError(result.message);
                     options?.onError?.(result.message);
+
+                    // Sonner error toast
+                    toast.error(
+                        options?.errorMessage || result.message || 'Something went wrong'
+                    );
+
                     return result;
                 }
             } catch (err) {
                 const message = err instanceof Error ? err.message : 'Unknown error';
                 setError(message);
                 options?.onError?.(message);
+
+                // Sonner error toast for thrown errors
+                toast.error(options?.errorMessage || message);
+
                 return { success: false, message } as ActionResult<TOutput>;
             } finally {
                 setIsPending(false);
