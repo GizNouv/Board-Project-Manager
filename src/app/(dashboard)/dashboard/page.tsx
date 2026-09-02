@@ -57,5 +57,6 @@ export default async function DashboardPage() {
     })),
   };
 
-  return <DashboardClient board={boardDTO} />;
+  // return <DashboardClient board={boardDTO} />;
+  return;
 }

@@ -28,7 +28,6 @@ export function DashboardClient({ board: initialBoard }: DashboardClientProps) {
                     <h1 className="text-3xl font-bold tracking-tight">{board.title}</h1>
                     <EditBoardDialog
                         board={board}
-                        onBoardUpdated={handleBoardUpdated}
                     />
                     <p className="text-muted-foreground ml-4">
                         Manage your tasks and track progress
@@ -40,7 +39,7 @@ export function DashboardClient({ board: initialBoard }: DashboardClientProps) {
                 </Button>
             </div>
 
-            <BoardView board={board} />
+            <BoardView/>
         </div>
     );
 }
