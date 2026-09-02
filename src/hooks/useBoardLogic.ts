@@ -1,3 +1,4 @@
+// src/hooks/useBoardLogic.ts
 'use client';
 
 import { useCallback } from 'react';
@@ -6,96 +7,111 @@ import { ColumnData, TaskData } from '@/types/kanban';
 
 interface UseBoardLogicReturn {
   // State from store
-  columns: ColumnData[];
-  activeColumn: ColumnData | null;
-  activeTask: TaskData | null;
+  columns: Record<string, ColumnData>;
+  columnOrder: string[];
+  activeColumnId: string | null;
+  activeTaskId: string | null;
   isContainerOver: boolean;
   boardId: string;
   mousePosition: { x: number; y: number } | null;
 
-  // Sensors (to be implemented)
-  sensors: ReturnType<typeof import('@dnd-kit/core').useSensors>;
-
-  // Callbacks (to be migrated from BoardView in later steps)
+  // Handlers (business logic only, no useAction)
   handleTaskCreated: (task: TaskData) => void;
   handleTaskUpdated: (task: TaskData) => void;
+  handleTaskDeleted: (taskId: string, columnId: string) => void;
+  handleColumnCreated: (column: ColumnData) => void;
   handleColumnUpdated: (column: ColumnData) => void;
-  handleDragStart: (event: import('@dnd-kit/core').DragStartEvent) => void;
-  handleDragEnd: (event: import('@dnd-kit/core').DragEndEvent) => void;
+  handleColumnDeleted: (columnId: string) => void;
 }
 
-export function useBoardLogic(boardId: string, initialColumns: ColumnData[]): UseBoardLogicReturn {
-  // Store state
+// No parameters needed — state is read from store
+export function useBoardLogic(): UseBoardLogicReturn {
+  // ============================================================
+  // State from store (read-only)
+  // ============================================================
+
   const columns = useBoardStore((state) => state.columns);
-  const activeColumn = useBoardStore((state) => state.activeColumn);
-  const activeTask = useBoardStore((state) => state.activeTask);
+  const columnOrder = useBoardStore((state) => state.columnOrder);
+  const activeColumnId = useBoardStore((state) => state.activeColumnId);
+  const activeTaskId = useBoardStore((state) => state.activeTaskId);
   const isContainerOver = useBoardStore((state) => state.isContainerOver);
   const mousePosition = useBoardStore((state) => state.mousePosition);
-  const storedBoardId = useBoardStore((state) => state.boardId);
+  const boardId = useBoardStore((state) => state.boardId);
 
-  // Store setters
-  const setColumns = useBoardStore((state) => state.setColumns);
-  const setActiveColumn = useBoardStore((state) => state.setActiveColumn);
-  const setActiveTask = useBoardStore((state) => state.setActiveTask);
-  const setMousePosition = useBoardStore((state) => state.setMousePosition);
-  const setContainerOver = useBoardStore((state) => state.setContainerOver);
-  const setBoardId = useBoardStore((state) => state.setBoardId);
+  // ============================================================
+  // Setters from store (for state updates)
+  // ============================================================
 
-  // Initialize store on first call / boardId change
-  // TODO: Add proper initialization logic in Step 3
+  const addTask = useBoardStore((state) => state.addTask);
+  const updateTask = useBoardStore((state) => state.updateTask);
+  const deleteTask = useBoardStore((state) => state.deleteTask);
+  const addColumn = useBoardStore((state) => state.addColumn);
+  const updateColumn = useBoardStore((state) => state.updateColumn);
+  const deleteColumn = useBoardStore((state) => state.deleteColumn);
 
-  // ========== HANDLE TASK CREATED CALLBACK ==========
-  // Migrated from BoardView.tsx - Step 4
-  const handleTaskCreated = useCallback((newTask: TaskData) => {
-    console.log('[useBoardLogic] Task created, updating state:', newTask);
+  // ============================================================
+  // Handlers (business logic only — no useAction)
+  // ============================================================
 
-    setColumns(prevColumns => {
-      return prevColumns.map(column => {
-        if (column.id === newTask.columnId) {
-          if (column.tasks.some(task => task.id === newTask.id)) {
-            return column;
-          }
-          return {
-            ...column,
-            tasks: [...column.tasks, newTask],
-          };
-        }
-        return column;
-      });
-    });
-  }, [setColumns]);
+  // ---------- TASK HANDLERS ----------
+
+  const handleTaskCreated = useCallback((task: TaskData) => {
+    console.log('[useBoardLogic] Task created:', task);
+    addTask(task.columnId, task);
+  }, [addTask]);
 
   const handleTaskUpdated = useCallback((task: TaskData) => {
-    console.warn('[useBoardLogic] handleTaskUpdated not yet implemented');
-  }, []);
+    console.log('[useBoardLogic] Task updated:', task);
+    updateTask(task.columnId, task.id, {
+      title: task.title,
+      description: task.description,
+      priority: { value: task.priority.value },
+      estimate: { value: task.estimate.value, unit: task.estimate.unit },
+    });
+  }, [updateTask]);
+
+  const handleTaskDeleted = useCallback((taskId: string, columnId: string) => {
+    console.log('[useBoardLogic] Task deleted:', taskId);
+    deleteTask(columnId, taskId);
+  }, [deleteTask]);
+
+  // ---------- COLUMN HANDLERS ----------
+
+  const handleColumnCreated = useCallback((column: ColumnData) => {
+    console.log('[useBoardLogic] Column created:', column);
+    addColumn(column);
+  }, [addColumn]);
 
   const handleColumnUpdated = useCallback((column: ColumnData) => {
-    console.warn('[useBoardLogic] handleColumnUpdated not yet implemented');
-  }, []);
+    console.log('[useBoardLogic] Column updated:', column);
+    updateColumn(column.id, { title: column.title });
+  }, [updateColumn]);
 
-  const handleDragStart = useCallback((event: import('@dnd-kit/core').DragStartEvent) => {
-    console.warn('[useBoardLogic] handleDragStart not yet implemented');
-  }, []);
+  const handleColumnDeleted = useCallback((columnId: string) => {
+    console.log('[useBoardLogic] Column deleted:', columnId);
+    deleteColumn(columnId);
+  }, [deleteColumn]);
 
-  const handleDragEnd = useCallback((event: import('@dnd-kit/core').DragEndEvent) => {
-    console.warn('[useBoardLogic] handleDragEnd not yet implemented');
-  }, []);
-
-  // Sensors placeholder
-  const sensors = [] as any; // TODO: migrate sensor setup in Step 3
+  // ============================================================
+  // Return (State + Handlers)
+  // ============================================================
 
   return {
+    // State
     columns,
-    activeColumn,
-    activeTask,
+    columnOrder,
+    activeColumnId,
+    activeTaskId,
     isContainerOver,
-    boardId: storedBoardId || boardId,
+    boardId,
     mousePosition,
-    sensors,
+
+    // Handlers
     handleTaskCreated,
     handleTaskUpdated,
+    handleTaskDeleted,
+    handleColumnCreated,
     handleColumnUpdated,
-    handleDragStart,
-    handleDragEnd,
+    handleColumnDeleted,
   };
 }
