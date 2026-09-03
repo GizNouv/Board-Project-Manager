@@ -1,25 +1,21 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { CreateBoardDialog } from '../board/CreateBoardDialog';
 
 interface BoardEmptyStateProps {
-    onCreateBoard?: () => void;
+    userId: string;
 }
 
-export function BoardEmptyState({ onCreateBoard }: BoardEmptyStateProps) {
+export function BoardEmptyState({ userId }: BoardEmptyStateProps) {
     return (
         <Card className="flex flex-col items-center justify-center p-12 text-center">
-            <CardHeader>
+            <CardHeader className='w-full'>
                 <CardTitle className="text-2xl">No Boards Found</CardTitle>
                 <CardDescription>
                     You don't have any boards yet. Create your first board to get started.
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <Button onClick={onCreateBoard}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Board
-                </Button>
+                <CreateBoardDialog userId={userId} />
             </CardContent>
         </Card>
     );

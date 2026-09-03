@@ -8,7 +8,7 @@ interface EmptyColumnStateProps {
 export function EmptyColumnState({ boardId }: EmptyColumnStateProps) {
     return (
         <Card className="flex flex-col items-center justify-center p-12 text-center">
-            <CardHeader>
+            <CardHeader className='w-full'>
                 <CardTitle className="text-2xl">No Columns Yet</CardTitle>
                 <CardDescription>
                     This board has no columns. Create your first column to organize your tasks.

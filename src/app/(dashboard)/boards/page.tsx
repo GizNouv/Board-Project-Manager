@@ -29,7 +29,7 @@ export default async function BoardsPage() {
         <CreateBoardDialog userId={user.id} />
       </div>
 
-      {hasBoards ? <BoardList boards={boardDTOs} /> : <BoardEmptyState />}
+      {hasBoards ? <BoardList boards={boardDTOs} /> : <BoardEmptyState userId={user.id} />}
     </div>
   );
 }
