@@ -26,9 +26,10 @@ export function BoardHeader({
   const { execute: deleteBoard, isPending: isDeleting } = useAction(deleteBoardAction);
 
   const handleDelete = async () => {
-    await deleteBoard(
+        await deleteBoard(
       { boardId },
       {
+        successMessage: "Board deleted successfully",
         onSuccess: () => {
           router.push('/boards');
         }
