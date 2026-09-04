@@ -5,8 +5,8 @@ export const ROUTES = {
   login: '/login' as Route,
   register: '/register' as Route,
   dashboard: '/dashboard' as Route,
-   boards: '/boards' as Route,
-  board: '/boards/[boardId]' as Route,
+  boards: '/boards' as Route,
+  board: (boardId: string) => `/boards/${boardId}` as Route,
   tasks: '/tasks' as Route,
   profile: '/profile' as Route,
   api: {
