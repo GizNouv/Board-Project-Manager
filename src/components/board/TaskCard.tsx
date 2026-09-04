@@ -41,10 +41,11 @@ export function TaskCard({ task, className, columnId }: TaskCardProps) {
     };
 
     const handleDelete = async () => {
-        await deleteTask({
+                await deleteTask({
             taskId: task.id,
             columnId: columnId,
         }, {
+            successMessage: "Task deleted successfully",
             onSuccess: () => {
                 handleTaskDeleted(task.id, columnId);
             },

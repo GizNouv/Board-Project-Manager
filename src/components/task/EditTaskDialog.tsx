@@ -104,6 +104,7 @@ export function EditTaskDialog({
             severity: data.severity,
             complexity: data.complexity,
         }, {
+            successMessage: "Task updated successfully",
             onSuccess: (result) => {
                 const updatedTask: TaskData = TaskMapper.toTaskData(result)
                 handleTaskUpdated(updatedTask);

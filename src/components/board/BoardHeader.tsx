@@ -26,9 +26,10 @@ export function BoardHeader({
   const { execute: deleteBoard, isPending: isDeleting } = useAction(deleteBoardAction);
 
   const handleDelete = async () => {
-    await deleteBoard(
+        await deleteBoard(
       { boardId },
       {
+        successMessage: "Board deleted successfully",
         onSuccess: () => {
           router.push('/boards');
         }
@@ -38,10 +39,10 @@ export function BoardHeader({
 
   return (
     <div className={className}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap md:flex-nowrap gap-4">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-ellipsis line-clamp-1">{title}</h1>
             <p className="text-muted-foreground">
               Manage your tasks and track progress
               {updatedAt && (

@@ -87,6 +87,7 @@ export function CreateTaskDialog({ columnId, trigger }: CreateTaskDialogProps) {
             columnId,
             type: 'FEATURE'
         }, {
+            successMessage: "Task created successfully",
             onSuccess: (result) => {
                 const taskData: TaskData = TaskMapper.toTaskData(result)
                 handleTaskCreated(taskData);

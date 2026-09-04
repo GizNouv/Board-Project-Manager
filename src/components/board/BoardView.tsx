@@ -291,13 +291,14 @@ export function BoardView({
         nextColumns.map((col) => col.id)
       );
 
-      await reorderColumns(
+            await reorderColumns(
         {
           boardId,
           columnId: movedColumnId,
           newOrder: finalIndex,
         },
         {
+          successMessage: "Column reordered",
           onSuccess: () => {
             previousColumnsRef.current = null;
           },
@@ -452,7 +453,7 @@ export function BoardView({
           return;
         }
 
-        await moveTask(
+                await moveTask(
           {
             taskId,
             sourceColumnId,
@@ -462,6 +463,7 @@ export function BoardView({
             targetTaskIds,
           },
           {
+            successMessage: "Task moved",
             onSuccess: () => {
               console.log('[DND] ✅ Cross-column move persisted');
               previousColumnsRef.current = null;
@@ -541,12 +543,13 @@ export function BoardView({
         nextColumns.map((col) => col.id)
       );
 
-      await reorderTasks(
+            await reorderTasks(
         {
           columnId: destinationColumn.id,
           orderedTaskIds: taskList.map((task) => task.id),
         },
         {
+          successMessage: "Tasks reordered",
           onSuccess: () => {
             console.log('[DND] ✅ Task reorder persisted');
             previousColumnsRef.current = null;

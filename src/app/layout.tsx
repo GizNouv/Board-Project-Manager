@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { getServerSession } from "@/lib/session";
 import { Providers } from "./providers";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistMonoHeading = Geist_Mono({ subsets: ['latin'], variable: '--font-heading' });
 
@@ -39,6 +40,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col">
         <Providers session={session}>
           {children}
+          <Toaster position="top-center" richColors />
         </Providers>
       </body>
     </html>

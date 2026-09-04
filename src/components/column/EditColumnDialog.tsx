@@ -82,6 +82,7 @@ export function EditColumnDialog({
             boardId: boardId,
             title: data.title,
         }, {
+            successMessage: "Column updated successfully",
             onSuccess: (result) => {
                 const updatedColumn: ColumnData = ColumnMapper.toColumnData(result, column.tasks);;
                 handleColumnUpdated(updatedColumn);

@@ -78,7 +78,8 @@ export function EditBoardDialog({
             boardId: board.id,
             title: data.title,
         }, {
-            onSuccess: (result) => {
+            successMessage: "Board updated successfully",
+            onSuccess: () => {
                 onOpenChange(false);
                 reset();
             },

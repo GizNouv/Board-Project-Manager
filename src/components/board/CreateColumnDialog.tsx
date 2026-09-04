@@ -71,10 +71,11 @@ export function CreateColumnDialog({
     });
 
     const onSubmit = async (data: CreateColumnFormData) => {
-        await createColumn({
+                await createColumn({
             boardId,
             title: data.title,
         }, {
+            successMessage: "Column created successfully",
             onSuccess: (result) => {
                 const newColumn: ColumnData = ColumnMapper.toColumnData(result);
                 handleColumnCreated(newColumn);

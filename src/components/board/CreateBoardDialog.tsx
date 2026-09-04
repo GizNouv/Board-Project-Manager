@@ -56,10 +56,11 @@ export function CreateBoardDialog({ userId }: CreateBoardDialogProps) {
     });
 
     const onSubmit = async (data: CreateBoardFormData) => {
-        await createBoard({
+                await createBoard({
             title: data.title,
             ownerId: userId,
         }, {
+            successMessage: "Board created successfully",
             onSuccess: (result) => {
                 setOpen(false);
                 resetForm();

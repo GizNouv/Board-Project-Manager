@@ -28,7 +28,7 @@ export function SortableColumn({
   return (
     <div
       ref={ref}
-      className="cursor-grab active:cursor-grabbing relative flex-shrink-0 w-[280px] h-[calc(100svh-230px)] overflow-hidden mb-4"
+      className="cursor-grab active:cursor-grabbing relative flex-shrink-0 w-[280px] h-[calc(100svh-230px)] overflow-hidden pb-4"
       style={{ opacity: isDragging ? 0.4 : 1 }}
       data-column-id={column.id}
     >

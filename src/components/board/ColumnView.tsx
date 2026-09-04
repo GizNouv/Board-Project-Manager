@@ -50,10 +50,11 @@ export function ColumnView({
     });
 
     const handleDelete = async () => {
-        await deleteColumn({
+                await deleteColumn({
             columnId: column.id,
             boardId: boardId,
         }, {
+            successMessage: "Column deleted successfully",
             onSuccess: () => {
                 handleColumnDeleted(column.id);
             }

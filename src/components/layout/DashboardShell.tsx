@@ -14,7 +14,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
       <AppSidebar />
       <SidebarInset>
         <AppHeader />
-        <main id='DashboardShell' className="flex-1 p-4 md:p-6 max-w-[calc(100vw-(256px))] overflow-x-hidden transition-all duration-350">{children}</main>
+        <main id='DashboardShell' className="flex-1 p-4 md:p-6 md:max-w-[calc(100vw-(256px))] overflow-x-hidden transition-all duration-350">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );
