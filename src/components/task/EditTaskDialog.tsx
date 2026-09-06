@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -26,11 +26,12 @@ import { Field, FieldLabel, FieldContent, FieldError, FieldGroup } from '@/compo
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { updateTaskAction } from '@/app/actions';
+import { updateTaskAction, UpdateTaskInput } from '@/app/actions';
 import { TaskData } from '@/types/kanban';
 import { useAction } from '@/hooks/use-action';
 import { TaskMapper } from '@/lib/mappers';
 import { useBoardLogic } from '@/hooks/useBoardLogic';
+import { TASK_DEFAULTS } from '@/constants/task-defaults';
 
 const editTaskSchema = z.object({
     title: z.string()
@@ -41,6 +42,7 @@ const editTaskSchema = z.object({
     priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
     estimate: z.number().min(0, 'Estimate must be a positive number'),
     estimateUnit: z.enum(['hours', 'days']),
+    type: z.enum(['FEATURE', 'BUG', 'EPIC']),
     severity: z.enum(['minor', 'major', 'critical']).optional(),
     complexity: z.enum(['low', 'medium', 'high']).optional(),
 });
@@ -74,6 +76,8 @@ export function EditTaskDialog({
         handleSubmit,
         reset: resetForm,
         control,
+        watch,
+        resetField,
         formState: { errors },
     } = useForm<EditTaskFormData>({
         resolver: zodResolver(editTaskSchema),
@@ -83,15 +87,32 @@ export function EditTaskDialog({
             priority: task.priority.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
             estimate: task.estimate.value,
             estimateUnit: task.estimate.unit as 'hours' | 'days',
-            severity: task.type === 'bug' ? (task as any).severity : undefined,
-            complexity: task.type === 'feature' ? (task as any).complexity : undefined,
+            type: task.type.toUpperCase() as 'FEATURE' | 'BUG' | 'EPIC' || TASK_DEFAULTS.type,
+            severity: (task as any).severity || undefined,
+            complexity: (task as any).complexity || undefined,
         },
     });
 
-    const taskType = task.type;
+    // Reset form when task changes (after update action)
+    useEffect(() => {
+        resetForm({
+            title: task.title,
+            description: task.description || '',
+            priority: task.priority.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+            estimate: task.estimate.value,
+            estimateUnit: task.estimate.unit as 'hours' | 'days',
+            type: task.type.toUpperCase() as 'FEATURE' | 'BUG' | 'EPIC' || TASK_DEFAULTS.type,
+            severity: (task as any).severity || undefined,
+            complexity: (task as any).complexity || undefined,
+        });
+    }, [task, resetForm, open]);
+
+    const watchType = watch('type');
+    const taskType = watchType || task.type;
 
     const onSubmit = async (data: EditTaskFormData) => {
-        await updateTask({
+
+        const payload: UpdateTaskInput = {
             taskId: task.id,
             columnId: task.columnId,
             title: data.title,
@@ -101,17 +122,34 @@ export function EditTaskDialog({
                 value: data.estimate,
                 unit: data.estimateUnit,
             },
-            severity: data.severity,
-            complexity: data.complexity,
-        }, {
-            successMessage: "Task updated successfully",
-            onSuccess: (result) => {
-                const updatedTask: TaskData = TaskMapper.toTaskData(result)
-                handleTaskUpdated(updatedTask);
-                setOpen(false);
-                reset();
-            },
-        });
+        };
+
+        // Only include optional fields if they have valid values
+        if (data.severity !== undefined && data.severity !== null) {
+            payload.severity = data.severity;
+        }
+
+        if (data.complexity !== undefined && data.complexity !== null) {
+            payload.complexity = data.complexity;
+        }
+
+        if (data.type !== undefined && data.type !== task.type?.toUpperCase()) {
+            payload.type = data.type;
+        }
+
+        console.log('📤 Payload being sent:', JSON.stringify(payload, null, 2));
+
+        await updateTask(
+            payload,
+            {
+                successMessage: "Task updated successfully",
+                onSuccess: (result) => {
+                    const updatedTask: TaskData = TaskMapper.toTaskData(result);
+                    handleTaskUpdated(updatedTask);
+                    setOpen(false);
+                    reset();
+                },
+            });
     };
 
     const handleOpenChange = (newOpen: boolean) => {
@@ -185,11 +223,7 @@ export function EditTaskDialog({
                                                 value={field.value}
                                                 onValueChange={field.onChange}
                                             >
-                                                <SelectTrigger
-                                                    id="edit-priority"
-
-
-                                                >
+                                                <SelectTrigger id="edit-priority">
                                                     <SelectValue placeholder="Select priority" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -203,6 +237,49 @@ export function EditTaskDialog({
                                     />
                                 </FieldContent>
                                 {errors.priority && <FieldError>{errors.priority.message}</FieldError>}
+                            </Field>
+                        </FieldGroup>
+
+                        {/* Task Type Selector */}
+                        <FieldGroup>
+                            <Field>
+                                <FieldLabel htmlFor="edit-type">Task Type</FieldLabel>
+                                <FieldContent>
+                                    <Controller
+                                        name="type"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Select
+                                                disabled={isPending}
+                                                value={field.value}
+                                                onValueChange={(value) => {
+                                                    field.onChange(value);
+                                                    // Reset severity/complexity when type changes
+                                                    if (value === 'FEATURE') {
+                                                        resetField('severity');
+                                                        resetField('complexity', { defaultValue: task.complexity });
+                                                    } else if (value === 'BUG') {
+                                                        resetField('complexity');
+                                                        resetField('severity', { defaultValue: task.severity });
+                                                    } else {
+                                                        resetField('severity');
+                                                        resetField('complexity');
+                                                    }
+                                                }}
+                                            >
+                                                <SelectTrigger id="edit-type">
+                                                    <SelectValue placeholder="Select task type" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="FEATURE">Feature</SelectItem>
+                                                    <SelectItem value="BUG">Bug</SelectItem>
+                                                    <SelectItem value="EPIC">Epic</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                </FieldContent>
+                                {errors.type && <FieldError>{errors.type.message}</FieldError>}
                             </Field>
                         </FieldGroup>
 
@@ -238,11 +315,7 @@ export function EditTaskDialog({
                                                     value={field.value}
                                                     onValueChange={field.onChange}
                                                 >
-                                                    <SelectTrigger
-                                                        id="edit-estimateUnit"
-
-
-                                                    >
+                                                    <SelectTrigger id="edit-estimateUnit">
                                                         <SelectValue placeholder="Select unit" />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -258,7 +331,8 @@ export function EditTaskDialog({
                             </FieldGroup>
                         </div>
 
-                        {taskType === 'bug' && (
+                        {/* Conditional: Severity for BUG */}
+                        {taskType === 'BUG' && (
                             <FieldGroup>
                                 <Field>
                                     <FieldLabel htmlFor="edit-severity">Severity</FieldLabel>
@@ -272,11 +346,7 @@ export function EditTaskDialog({
                                                     value={field.value}
                                                     onValueChange={field.onChange}
                                                 >
-                                                    <SelectTrigger
-                                                        id="edit-severity"
-
-
-                                                    >
+                                                    <SelectTrigger id="edit-severity">
                                                         <SelectValue placeholder="Select severity" />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -293,7 +363,8 @@ export function EditTaskDialog({
                             </FieldGroup>
                         )}
 
-                        {taskType === 'feature' && (
+                        {/* Conditional: Complexity for FEATURE */}
+                        {taskType === 'FEATURE' && (
                             <FieldGroup>
                                 <Field>
                                     <FieldLabel htmlFor="edit-complexity">Complexity</FieldLabel>
@@ -307,9 +378,7 @@ export function EditTaskDialog({
                                                     value={field.value}
                                                     onValueChange={field.onChange}
                                                 >
-                                                    <SelectTrigger
-                                                        id="edit-complexity"
-                                                    >
+                                                    <SelectTrigger id="edit-complexity">
                                                         <SelectValue placeholder="Select complexity" />
                                                     </SelectTrigger>
                                                     <SelectContent>

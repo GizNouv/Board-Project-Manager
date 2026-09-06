@@ -16,6 +16,8 @@ export interface TaskDTO {
   columnId: string;
   createdAt: string;
   updatedAt: string;
+  severity?: 'minor' | 'major' | 'critical';
+  complexity?: 'low' | 'medium' | 'high';
 }
 
 // ============================================================
@@ -30,6 +32,8 @@ export const createTaskSchema = z.object({
   estimateUnit: z.enum(['hours', 'days']),
   columnId: z.string().min(1, 'Column ID is required'),
   type: z.enum(['FEATURE', 'BUG', 'EPIC']).default('FEATURE'),
+  severity: z.enum(['minor', 'major', 'critical']).optional(),
+  complexity: z.enum(['low', 'medium', 'high']).optional(),
 });
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
@@ -47,6 +51,7 @@ export const updateTaskSchema = z.object({
   severity: z.enum(['minor', 'major', 'critical']).optional(),
   complexity: z.enum(['low', 'medium', 'high']).optional(),
   assigneeId: z.string().nullable().optional(),
+  type: z.enum(['FEATURE', 'BUG', 'EPIC']).optional(),
 });
 
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;

@@ -15,7 +15,7 @@ export class Priority {
   private readonly _value: PriorityLevel;
 
   constructor(value: PriorityLevel) {
-    if (!Object.values(PriorityLevel).includes(value)) {
+    if (!PriorityLevel[value]) {
       throw new ValidationException(`Invalid priority level: ${value}`);
     }
     this._value = value;

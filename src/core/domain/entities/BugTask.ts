@@ -3,6 +3,7 @@ import { TaskId } from '../value-objects/TaskId';
 import { UserId } from '../value-objects/UserId';
 import { Priority } from '../value-objects/Priority';
 import { Estimate } from '../value-objects/Estimate';
+import { TASK_DEFAULTS } from '@/constants/task-defaults';
 
 /**
  * BugTask - Concrete implementation of BaseTask for bug-related work
@@ -19,7 +20,7 @@ export class BugTask extends BaseTask {
     estimate: Estimate,
     priority: Priority,
     assigneeId: UserId | null = null,
-    severity: 'minor' | 'major' | 'critical' = 'major'
+    severity: 'minor' | 'major' | 'critical' = TASK_DEFAULTS.severity
   ) {
     super(id, title, description, estimate, priority, assigneeId);
     this._severity = severity;
@@ -76,6 +77,6 @@ export class BugTask extends BaseTask {
   }
 
   public override get type(): string {
-    return 'bug';
+    return 'BUG';
   }
 }

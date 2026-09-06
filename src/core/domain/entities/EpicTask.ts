@@ -84,6 +84,6 @@ export class EpicTask extends BaseTask {
   }
 
   public override get type(): string {
-    return 'epic';
+    return 'EPIC';
   }
 }

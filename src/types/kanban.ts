@@ -12,6 +12,8 @@ export interface TaskData {
     type: string;
     assigneeId: string | null;
     columnId: string;
+    severity?: 'minor' | 'major' | 'critical';
+    complexity?: 'low' | 'medium' | 'high';
 }
 
 export interface ColumnData {

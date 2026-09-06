@@ -20,9 +20,10 @@ export class TaskMapper {
             priority: {
                 value: dto.priority,
             },
-            type: dto.type,
+            type: dto.type.toUpperCase(),
             assigneeId: dto.assigneeId,
-            // ✅ Ignore createdAt, updatedAt
+            severity: dto.severity || undefined,
+            complexity: dto.complexity || undefined,
         };
     }
 
@@ -40,6 +41,8 @@ export class TaskMapper {
             priority: data.priority.value,
             type: data.type,
             assigneeId: data.assigneeId,
+            severity: data.severity,
+            complexity: data.complexity,
         };
     }
 }

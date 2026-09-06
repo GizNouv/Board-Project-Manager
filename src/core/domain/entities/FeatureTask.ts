@@ -3,6 +3,7 @@ import { TaskId } from '../value-objects/TaskId';
 import { UserId } from '../value-objects/UserId';
 import { Priority } from '../value-objects/Priority';
 import { Estimate } from '../value-objects/Estimate';
+import { TASK_DEFAULTS } from '@/constants/task-defaults';
 
 /**
  * FeatureTask - Concrete implementation of BaseTask for feature development
@@ -20,7 +21,7 @@ export class FeatureTask extends BaseTask {
     estimate: Estimate,
     priority: Priority,
     assigneeId: UserId | null = null,
-    complexity: 'low' | 'medium' | 'high' = 'medium'
+    complexity: 'low' | 'medium' | 'high' = TASK_DEFAULTS.complexity
   ) {
     super(id, title, description, estimate, priority, assigneeId);
     this._complexity = complexity;
@@ -104,6 +105,6 @@ export class FeatureTask extends BaseTask {
   }
 
   public override get type(): string {
-    return 'feature';
+    return 'FEATURE';
   }
 }

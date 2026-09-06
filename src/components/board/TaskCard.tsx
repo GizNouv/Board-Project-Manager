@@ -31,9 +31,9 @@ export function TaskCard({ task, className, columnId }: TaskCardProps) {
     };
 
     const typeColors = {
-        bug: 'bg-red-500/10 text-red-700 dark:text-red-400',
-        feature: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
-        epic: 'bg-purple-500/10 text-purple-700 dark:text-purple-400',
+        BUG: 'bg-red-500/10 text-red-700 dark:text-red-400',
+        FEATURE: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+        EPIC: 'bg-purple-500/10 text-purple-700 dark:text-purple-400',
     };
 
     const handleEdit = () => {
@@ -41,7 +41,7 @@ export function TaskCard({ task, className, columnId }: TaskCardProps) {
     };
 
     const handleDelete = async () => {
-                await deleteTask({
+        await deleteTask({
             taskId: task.id,
             columnId: columnId,
         }, {
@@ -92,6 +92,16 @@ export function TaskCard({ task, className, columnId }: TaskCardProps) {
                             )}
                         >
                             {task.type}
+                        </Badge>
+                        <Badge
+                            variant="outline"
+                            className={cn(
+                                'text-xs font-medium uppercase',
+                                !task.complexity && !task.severity && 'hidden'
+                                // typeColors[task.type as keyof typeof typeColors] || ''
+                            )}
+                        >
+                            {task.complexity ?? task.severity}
                         </Badge>
                     </div>
                     <div className="flex items-center justify-between text-xs text-muted-foreground">

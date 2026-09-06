@@ -2,6 +2,7 @@
 import { Board } from '@/core/domain/entities/Board';
 import { BoardCardData } from '@/components/boards/BoardCard';
 import { BoardData } from '@/types/kanban';
+import { BugTask, FeatureTask } from '@/core/domain';
 
 export class BoardMapper {
     static toBoardCardDTO(board: Board): BoardCardData {
@@ -35,6 +36,8 @@ export class BoardMapper {
                         value: task.priority.value,
                     },
                     type: task.type,
+                    severity: task instanceof BugTask ? task.severity : undefined,
+                    complexity: task instanceof FeatureTask ? task.complexity : undefined,
                     assigneeId: task.assigneeId?.toString() || null,
                 })),
             })),

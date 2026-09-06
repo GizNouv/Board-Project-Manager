@@ -28,6 +28,7 @@ export interface UpdateTaskDTO {
   assigneeId?: string | null;
   severity?: 'minor' | 'major' | 'critical';
   complexity?: 'low' | 'medium' | 'high';
+  type?: 'BUG' | 'FEATURE' | 'EPIC';
 }
 
 export interface MoveTaskDTO {

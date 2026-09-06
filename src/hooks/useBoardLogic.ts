@@ -67,6 +67,9 @@ export function useBoardLogic(): UseBoardLogicReturn {
       description: task.description,
       priority: { value: task.priority.value },
       estimate: { value: task.estimate.value, unit: task.estimate.unit },
+      type: task.type,
+      complexity: task.complexity,
+      severity: task.severity,
     });
   }, [updateTask]);
 

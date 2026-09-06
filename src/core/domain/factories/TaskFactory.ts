@@ -7,6 +7,7 @@ import { UserId } from '../value-objects/UserId';
 import { Priority, PriorityLevel } from '../value-objects/Priority';
 import { Estimate } from '../value-objects/Estimate';
 import { ValidationException } from '../exceptions/BaseExceptions';
+import { TASK_DEFAULTS } from '@/constants/task-defaults';
 
 export enum TaskType {
   BUG = 'bug',
@@ -40,23 +41,23 @@ export class TaskFactory {
       const id = new TaskId(params.id || crypto.randomUUID());
       const userId = params.assigneeId ? new UserId(params.assigneeId) : null;
       const priority = new Priority(params.priority as PriorityLevel);
-      const estimate = new Estimate(params.estimate.value, params.estimate.unit || 'hours');
-      return new BugTask(id, params.title, params.description, estimate, priority, userId, params.severity || 'major');
+      const estimate = new Estimate(params.estimate.value, params.estimate.unit || TASK_DEFAULTS.estimateUnit);
+      return new BugTask(id, params.title, params.description, estimate, priority, userId, TASK_DEFAULTS.severity);
     });
-
+    
     this.registerCreator(TaskType.FEATURE, (params) => {
       const id = new TaskId(params.id || crypto.randomUUID());
       const userId = params.assigneeId ? new UserId(params.assigneeId) : null;
       const priority = new Priority(params.priority as PriorityLevel);
-      const estimate = new Estimate(params.estimate.value, params.estimate.unit || 'hours');
-      return new FeatureTask(id, params.title, params.description, estimate, priority, userId, params.complexity || 'medium');
+      const estimate = new Estimate(params.estimate.value, params.estimate.unit || TASK_DEFAULTS.estimateUnit);
+      return new FeatureTask(id, params.title, params.description, estimate, priority, userId, params.complexity || TASK_DEFAULTS.complexity);
     });
-
+    
     this.registerCreator(TaskType.EPIC, (params) => {
       const id = new TaskId(params.id || crypto.randomUUID());
       const userId = params.assigneeId ? new UserId(params.assigneeId) : null;
       const priority = new Priority(params.priority as PriorityLevel);
-      const estimate = new Estimate(params.estimate.value, params.estimate.unit || 'hours');
+      const estimate = new Estimate(params.estimate.value, params.estimate.unit || TASK_DEFAULTS.estimateUnit);
       return new EpicTask(id, params.title, params.description, estimate, priority, userId);
     });
   }
