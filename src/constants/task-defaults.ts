@@ -9,26 +9,26 @@
  * - Update: Only apply default if reclassifying task (FEATURE → BUG needs severity)
  * - Prisma: @default in schema is a database safety net, not the source of truth
  */
+import {
+    type TaskType,
+    type Priority,
+    type EstimateUnit,
+    type Severity,
+    type Complexity,
+    type EstimateValue,
+    TaskTypesEnum,
+    TaskPrioritiesEnum,
+    TaskEstimateUnitEnum,
+    TaskSeverityEnum,
+    TaskComplexityEnum
+} from '@/types';
+
 export const TASK_DEFAULTS = {
-    // Type classification
-    type: 'FEATURE' as const,
-    severity: 'major' as const,        // For BUG tasks
-    complexity: 'medium' as const,     // For FEATURE tasks
-
-    // Effort estimation
-    estimate: 1 as const,
-    estimateUnit: 'hours' as const,
-
-    // Priority
-    priority: 'MEDIUM' as const,
-
-    // Ordering (Prisma only, not exposed to app)
+    type: TaskTypesEnum.FEATURE as TaskType,
+    priority: TaskPrioritiesEnum.MEDIUM as Priority,
+    estimateUnit: TaskEstimateUnitEnum.HOURS as EstimateUnit,
+    severity: TaskSeverityEnum.MAJOR as Severity,
+    complexity: TaskComplexityEnum.MEDIUM as Complexity,
+    estimate: 1 as EstimateValue,
     order: 0 as const,
 } as const;
-
-// Type helpers for TypeScript
-export type TaskType = typeof TASK_DEFAULTS.type;
-export type Severity = 'minor' | 'major' | 'critical';
-export type Complexity = 'low' | 'medium' | 'high';
-export type EstimateUnit = 'hours' | 'days';
-export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
