@@ -79,10 +79,10 @@ export function TaskCard({ task, className, columnId }: TaskCardProps) {
                             variant="secondary"
                             className={cn(
                                 'text-xs font-medium',
-                                priorityColors[task.priority.value as keyof typeof priorityColors] || ''
+                                priorityColors[task.priority as keyof typeof priorityColors] || ''
                             )}
                         >
-                            {task.priority.value}
+                            {task.priority}
                         </Badge>
                         <Badge
                             variant="outline"
