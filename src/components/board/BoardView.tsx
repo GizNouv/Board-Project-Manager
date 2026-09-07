@@ -650,7 +650,7 @@ export function BoardView({
                   <p className="font-medium text-sm">{task.title}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                      {task.priority.value}
+                      {task.priority}
                     </span>
                     <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
                       {task.type}
