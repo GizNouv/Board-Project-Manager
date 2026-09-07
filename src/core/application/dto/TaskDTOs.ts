@@ -1,34 +1,12 @@
-/**
- * Data Transfer Objects for Task operations
- * Used by application services to communicate with the outside world
- */
-export interface CreateTaskDTO {
-  title: string;
-  description: string;
-  estimate: {
-    value: number;
-    unit?: 'hours' | 'days';
-  };
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  assigneeId?: string;
-  columnId: string;
-  type: 'BUG' | 'FEATURE' | 'EPIC';
-  severity?: 'minor' | 'major' | 'critical';
-  complexity?: 'low' | 'medium' | 'high';
-}
+import type { TaskFields } from '@/types/shared/task';
 
-export interface UpdateTaskDTO {
-  title?: string;
-  description?: string;
-  estimate?: {
-    value: number;
-    unit?: 'hours' | 'days';
-  };
-  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  assigneeId?: string | null;
-  severity?: 'minor' | 'major' | 'critical';
-  complexity?: 'low' | 'medium' | 'high';
-}
+// ============================================================
+// DTOs
+// ============================================================
+
+export interface CreateTaskDTO extends TaskFields {}
+
+export interface UpdateTaskDTO extends Partial<TaskFields> {}
 
 export interface MoveTaskDTO {
   taskId: string;

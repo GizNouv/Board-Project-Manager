@@ -3,6 +3,7 @@ import { TaskId } from '../value-objects/TaskId';
 import { UserId } from '../value-objects/UserId';
 import { Priority } from '../value-objects/Priority';
 import { Estimate } from '../value-objects/Estimate';
+import { TaskType, TaskTypesEnum } from '@/types';
 
 /**
  * EpicTask - Concrete implementation for large-scale initiatives
@@ -83,7 +84,7 @@ export class EpicTask extends BaseTask {
     return 'amber';
   }
 
-  public override get type(): string {
-    return 'epic';
+  public override get type(): TaskType {
+    return TaskTypesEnum.EPIC;
   }
 }
