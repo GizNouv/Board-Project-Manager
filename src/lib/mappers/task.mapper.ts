@@ -1,6 +1,7 @@
 // src/lib/mappers/task.mapper.ts
 
 import { TaskDTO } from '@/app/actions/tasks/types';
+import { TaskEstimateUnitEnum } from '@/types';
 import { TaskData } from '@/types/kanban';
 
 export class TaskMapper {
@@ -15,12 +16,10 @@ export class TaskMapper {
             columnId: dto.columnId,
             estimate: {
                 value: dto.estimate,
-                unit: dto.estimateUnit as 'hours' | 'days',
+                unit: dto.estimateUnit,
             },
-            priority: {
-                value: dto.priority,
-            },
-            type: dto.type.toUpperCase(),
+            priority: dto.priority,
+            type: dto.type,
             assigneeId: dto.assigneeId,
             severity: dto.severity || undefined,
             complexity: dto.complexity || undefined,
@@ -37,10 +36,10 @@ export class TaskMapper {
             description: data.description,
             columnId: data.columnId,
             estimate: data.estimate.value,
-            estimateUnit: data.estimate.unit,
-            priority: data.priority.value,
+            estimateUnit: data.estimate.unit || TaskEstimateUnitEnum.HOURS,
+            priority: data.priority,
             type: data.type,
-            assigneeId: data.assigneeId,
+            assigneeId: data.assigneeId ?? null,
             severity: data.severity,
             complexity: data.complexity,
         };

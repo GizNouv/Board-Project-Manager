@@ -3,6 +3,7 @@ import { Board } from '@/core/domain/entities/Board';
 import { BoardCardData } from '@/components/boards/BoardCard';
 import { BoardData } from '@/types/kanban';
 import { BugTask, FeatureTask } from '@/core/domain';
+import type { Priority as SharedPriority } from '@/types/shared/task';
 
 export class BoardMapper {
     static toBoardCardDTO(board: Board): BoardCardData {
@@ -32,9 +33,7 @@ export class BoardMapper {
                         value: task.estimate.value,
                         unit: task.estimate.unit,
                     },
-                    priority: {
-                        value: task.priority.value,
-                    },
+                    priority: task.priority.value,
                     type: task.type,
                     severity: task instanceof BugTask ? task.severity : undefined,
                     complexity: task instanceof FeatureTask ? task.complexity : undefined,
