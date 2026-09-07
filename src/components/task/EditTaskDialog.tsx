@@ -32,6 +32,7 @@ import { useAction } from '@/hooks/use-action';
 import { TaskMapper } from '@/lib/mappers';
 import { useBoardLogic } from '@/hooks/useBoardLogic';
 import { TASK_DEFAULTS } from '@/constants/task-defaults';
+import { COMPLEXITIES, ESTIMATE_UNITS, EstimateUnit, PRIORITIES, Priority, SEVERITIES, TASK_TYPES, TaskComplexityEnum, TaskEstimateUnitEnum, TaskPrioritiesEnum, TaskSeverityEnum, TaskType, TaskTypesEnum } from '@/types';
 
 const editTaskSchema = z.object({
     title: z.string()
@@ -39,12 +40,12 @@ const editTaskSchema = z.object({
         .max(200, 'Task title must not exceed 200 characters')
         .trim(),
     description: z.string().optional(),
-    priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
+    priority: z.enum(PRIORITIES),
     estimate: z.number().min(0, 'Estimate must be a positive number'),
-    estimateUnit: z.enum(['hours', 'days']),
-    type: z.enum(['FEATURE', 'BUG', 'EPIC']),
-    severity: z.enum(['minor', 'major', 'critical']).optional(),
-    complexity: z.enum(['low', 'medium', 'high']).optional(),
+    estimateUnit: z.enum(ESTIMATE_UNITS),
+    type: z.enum(TASK_TYPES),
+    severity: z.enum(SEVERITIES).optional(),
+    complexity: z.enum(COMPLEXITIES).optional(),
 });
 
 type EditTaskFormData = z.infer<typeof editTaskSchema>;
@@ -84,10 +85,10 @@ export function EditTaskDialog({
         defaultValues: {
             title: task.title,
             description: task.description || '',
-            priority: task.priority.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+            priority: task.priority as Priority,
             estimate: task.estimate.value,
-            estimateUnit: task.estimate.unit as 'hours' | 'days',
-            type: task.type.toUpperCase() as 'FEATURE' | 'BUG' | 'EPIC' || TASK_DEFAULTS.type,
+            estimateUnit: task.estimate.unit as EstimateUnit,
+            type: task.type.toUpperCase() as TaskType || TASK_DEFAULTS.type,
             severity: (task as any).severity || undefined,
             complexity: (task as any).complexity || undefined,
         },
@@ -98,10 +99,10 @@ export function EditTaskDialog({
         resetForm({
             title: task.title,
             description: task.description || '',
-            priority: task.priority.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+            priority: task.priority as Priority,
             estimate: task.estimate.value,
-            estimateUnit: task.estimate.unit as 'hours' | 'days',
-            type: task.type.toUpperCase() as 'FEATURE' | 'BUG' | 'EPIC' || TASK_DEFAULTS.type,
+            estimateUnit: task.estimate.unit as EstimateUnit,
+            type: task.type.toUpperCase() as TaskType || TASK_DEFAULTS.type,
             severity: (task as any).severity || undefined,
             complexity: (task as any).complexity || undefined,
         });
@@ -227,10 +228,10 @@ export function EditTaskDialog({
                                                     <SelectValue placeholder="Select priority" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="LOW">Low</SelectItem>
-                                                    <SelectItem value="MEDIUM">Medium</SelectItem>
-                                                    <SelectItem value="HIGH">High</SelectItem>
-                                                    <SelectItem value="CRITICAL">Critical</SelectItem>
+                                                    <SelectItem value={TaskPrioritiesEnum.LOW}>Low</SelectItem>
+                                                    <SelectItem value={TaskPrioritiesEnum.MEDIUM}>Medium</SelectItem>
+                                                    <SelectItem value={TaskPrioritiesEnum.HIGH}>High</SelectItem>
+                                                    <SelectItem value={TaskPrioritiesEnum.CRITICAL}>Critical</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         )}
@@ -271,9 +272,9 @@ export function EditTaskDialog({
                                                     <SelectValue placeholder="Select task type" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="FEATURE">Feature</SelectItem>
-                                                    <SelectItem value="BUG">Bug</SelectItem>
-                                                    <SelectItem value="EPIC">Epic</SelectItem>
+                                                    <SelectItem value={TaskTypesEnum.FEATURE}>Feature</SelectItem>
+                                                    <SelectItem value={TaskTypesEnum.BUG}>Bug</SelectItem>
+                                                    <SelectItem value={TaskTypesEnum.EPIC}>Epic</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         )}
@@ -319,8 +320,8 @@ export function EditTaskDialog({
                                                         <SelectValue placeholder="Select unit" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="hours">Hours</SelectItem>
-                                                        <SelectItem value="days">Days</SelectItem>
+                                                        <SelectItem value={TaskEstimateUnitEnum.HOURS}>Hours</SelectItem>
+                                                        <SelectItem value={TaskEstimateUnitEnum.DAYS}>Days</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             )}
@@ -350,9 +351,9 @@ export function EditTaskDialog({
                                                         <SelectValue placeholder="Select severity" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="minor">Minor</SelectItem>
-                                                        <SelectItem value="major">Major</SelectItem>
-                                                        <SelectItem value="critical">Critical</SelectItem>
+                                                        <SelectItem value={TaskSeverityEnum.MINOR}>Minor</SelectItem>
+                                                        <SelectItem value={TaskSeverityEnum.MAJOR}>Major</SelectItem>
+                                                        <SelectItem value={TaskSeverityEnum.CRITICAL}>Critical</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             )}
@@ -382,9 +383,9 @@ export function EditTaskDialog({
                                                         <SelectValue placeholder="Select complexity" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="low">Low</SelectItem>
-                                                        <SelectItem value="medium">Medium</SelectItem>
-                                                        <SelectItem value="high">High</SelectItem>
+                                                        <SelectItem value={TaskComplexityEnum.LOW}>Low</SelectItem>
+                                                        <SelectItem value={TaskComplexityEnum.MEDIUM}>Medium</SelectItem>
+                                                        <SelectItem value={TaskComplexityEnum.HIGH}>High</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             )}
