@@ -4,7 +4,6 @@ import {
   IColumnRepository,
   IBoardRepository,
   TaskFactory,
-  TaskType,
   TaskId,
   ColumnId,
   BoardId,
@@ -55,12 +54,15 @@ export class TaskApplicationService {
     console.log('  Column found:', column.id.toString(), column.title, 'tasks:', column.tasks.length);
 
     const task = TaskFactory.createTask(
-      dto.type.toLowerCase() as TaskType,
+      dto.type,
       {
+        id: crypto.randomUUID(),
         title: dto.title,
         description: dto.description,
         estimate: dto.estimate,
         priority: dto.priority,
+        type: dto.type,
+        columnId: dto.columnId,
         assigneeId: dto.assigneeId,
         severity: dto.severity,
         complexity: dto.complexity
@@ -160,7 +162,7 @@ export class TaskApplicationService {
       // For EPIC: no extra fields
 
       task = TaskFactory.createTask(
-        dto.type!.toLowerCase() as TaskType,
+        dto.type!,
         params
       );
     } else {
