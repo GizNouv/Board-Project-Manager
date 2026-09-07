@@ -5,6 +5,7 @@ import { User } from '../entities/User';
 import { Priority } from '../value-objects/Priority';
 import { Estimate } from '../value-objects/Estimate';
 import { ValidationException } from '../exceptions/ValidationException';
+import { PRIORITIES, TaskEstimateUnitEnum } from '@/types';
 
 /**
  * DomainValidator - Pure domain validation logic
@@ -159,7 +160,7 @@ export class DomainValidator {
       throw new ValidationException('Priority cannot be null');
     }
 
-    const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+    const validPriorities = PRIORITIES;
     if (!validPriorities.includes(priority.value)) {
       throw new ValidationException(`Invalid priority value: ${priority.value}`);
     }
@@ -179,11 +180,11 @@ export class DomainValidator {
       throw new ValidationException('Estimate cannot be negative');
     }
 
-    if (estimate.unit === 'hours' && estimate.value > 100) {
+    if (estimate.unit === TaskEstimateUnitEnum.HOURS && estimate.value > 100) {
       throw new ValidationException('Estimate cannot exceed 100 hours');
     }
 
-    if (estimate.unit === 'days' && estimate.value > 20) {
+    if (estimate.unit === TaskEstimateUnitEnum.DAYS && estimate.value > 20) {
       throw new ValidationException('Estimate cannot exceed 20 days');
     }
 

@@ -65,8 +65,11 @@ export function useBoardLogic(): UseBoardLogicReturn {
     updateTask(task.columnId, task.id, {
       title: task.title,
       description: task.description,
-      priority: { value: task.priority.value },
+      priority: task.priority,
       estimate: { value: task.estimate.value, unit: task.estimate.unit },
+      type: task.type,
+      complexity: task.complexity,
+      severity: task.severity,
     });
   }, [updateTask]);
 

@@ -21,6 +21,7 @@ export const updateTaskAction = createAction<UpdateTaskInput, TaskDTO>({
     if (input.severity !== undefined) updateDto.severity = input.severity;
     if (input.complexity !== undefined) updateDto.complexity = input.complexity;
     if (input.assigneeId !== undefined) updateDto.assigneeId = input.assigneeId;
+    if (input.type !== undefined) updateDto.type = input.type;
 
     const result = await taskService.updateTask(input.taskId, updateDto);
 
@@ -44,6 +45,8 @@ export const updateTaskAction = createAction<UpdateTaskInput, TaskDTO>({
         columnId: input.columnId,
         createdAt: task.createdAt.toISOString(),
         updatedAt: task.updatedAt.toISOString(),
+        severity: (task as any).severity,
+        complexity: (task as any).complexity,
       }
     };
   },

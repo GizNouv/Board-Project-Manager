@@ -7,7 +7,7 @@ import { createTaskSchema, type CreateTaskInput, type TaskDTO } from './types';
 export const createTaskAction = createAction<CreateTaskInput, TaskDTO>({
   handler: async ({ input }) => {
     const taskService = container.getTaskService();
-    
+
     const result = await taskService.createTask({
       title: input.title,
       description: input.description || '',
@@ -37,11 +37,13 @@ export const createTaskAction = createAction<CreateTaskInput, TaskDTO>({
         columnId: input.columnId,
         createdAt: task.createdAt.toISOString(),
         updatedAt: task.updatedAt.toISOString(),
+        severity: (task as any).severity,
+        complexity: (task as any).complexity,
       }
     };
   },
 })
-.withValidation(createTaskSchema)
-.withAuth()
-.withRevalidation((input) => `/boards/${input.columnId}`)
-.build();
+  .withValidation(createTaskSchema)
+  .withAuth()
+  .withRevalidation((input) => `/boards/${input.columnId}`)
+  .build();

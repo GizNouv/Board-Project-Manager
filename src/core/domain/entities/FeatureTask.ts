@@ -3,6 +3,8 @@ import { TaskId } from '../value-objects/TaskId';
 import { UserId } from '../value-objects/UserId';
 import { Priority } from '../value-objects/Priority';
 import { Estimate } from '../value-objects/Estimate';
+import { TASK_DEFAULTS } from '@/constants/task-defaults';
+import { Complexity, TaskComplexityEnum, TaskType, TaskTypesEnum } from '@/types';
 
 /**
  * FeatureTask - Concrete implementation of BaseTask for feature development
@@ -10,7 +12,7 @@ import { Estimate } from '../value-objects/Estimate';
  * Principle: Inheritance - extends BaseTask
  */
 export class FeatureTask extends BaseTask {
-  private _complexity: 'low' | 'medium' | 'high';
+  private _complexity: Complexity;
   private _dependencies: TaskId[] = [];
 
   constructor(
@@ -20,13 +22,13 @@ export class FeatureTask extends BaseTask {
     estimate: Estimate,
     priority: Priority,
     assigneeId: UserId | null = null,
-    complexity: 'low' | 'medium' | 'high' = 'medium'
+    complexity: Complexity = TASK_DEFAULTS.complexity
   ) {
     super(id, title, description, estimate, priority, assigneeId);
     this._complexity = complexity;
   }
 
-  get complexity(): 'low' | 'medium' | 'high' {
+  get complexity(): Complexity {
     return this._complexity;
   }
 
@@ -34,7 +36,7 @@ export class FeatureTask extends BaseTask {
     return [...this._dependencies];
   }
 
-  public updateComplexity(complexity: 'low' | 'medium' | 'high'): void {
+  public updateComplexity(complexity: Complexity): void {
     this._complexity = complexity;
   }
 
@@ -51,9 +53,9 @@ export class FeatureTask extends BaseTask {
   public override calculateStoryPoints(): number {
     const basePoints = this.estimate.toHours() / 4;
     const complexityMultiplier = {
-      low: 1,
-      medium: 2,
-      high: 3,
+      [TaskComplexityEnum.LOW]: 1,
+      [TaskComplexityEnum.MEDIUM]: 2,
+      [TaskComplexityEnum.HIGH]: 3,
     };
     return Math.round(basePoints * complexityMultiplier[this._complexity]);
   }
@@ -92,18 +94,18 @@ export class FeatureTask extends BaseTask {
 
   public override badgeColor(): string {
     switch (this._complexity) {
-      case 'low':
+      case TaskComplexityEnum.LOW:
         return 'blue';
-      case 'medium':
+      case TaskComplexityEnum.MEDIUM:
         return 'purple';
-      case 'high':
+      case TaskComplexityEnum.HIGH:
         return 'indigo';
       default:
         return 'gray';
     }
   }
 
-  public override get type(): string {
-    return 'feature';
+  public override get type(): TaskType {
+    return TaskTypesEnum.FEATURE;
   }
 }

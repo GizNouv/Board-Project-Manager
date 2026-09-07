@@ -32,6 +32,8 @@ import { TaskData } from '@/types/kanban';
 import { useAction } from '@/hooks/use-action';
 import { TaskMapper } from '@/lib/mappers';
 import { useBoardLogic } from '@/hooks/useBoardLogic';
+import { TASK_DEFAULTS } from '@/constants/task-defaults';
+import { COMPLEXITIES, ESTIMATE_UNITS, PRIORITIES, SEVERITIES, TASK_TYPES, TaskComplexityEnum, TaskEstimateUnitEnum, TaskPrioritiesEnum, TaskSeverityEnum, TaskTypesEnum } from '@/types';
 
 const createTaskSchema = z.object({
     title: z.string()
@@ -39,9 +41,12 @@ const createTaskSchema = z.object({
         .max(200, 'Task title must not exceed 200 characters')
         .trim(),
     description: z.string().optional(),
-    priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
+    priority: z.enum(PRIORITIES),
     estimate: z.number().min(0, 'Estimate must be a positive number'),
-    estimateUnit: z.enum(['hours', 'days']),
+    estimateUnit: z.enum(ESTIMATE_UNITS),
+    type: z.enum(TASK_TYPES),
+    severity: z.enum(SEVERITIES).optional(),
+    complexity: z.enum(COMPLEXITIES).optional(),
 });
 
 type CreateTaskFormData = z.infer<typeof createTaskSchema>;
@@ -64,18 +69,25 @@ export function CreateTaskDialog({ columnId, trigger }: CreateTaskDialogProps) {
         register,
         handleSubmit,
         reset: resetForm,
+        resetField,
         control,
+        watch,
         formState: { errors },
     } = useForm<CreateTaskFormData>({
         resolver: zodResolver(createTaskSchema),
         defaultValues: {
             title: '',
             description: '',
-            priority: 'MEDIUM',
-            estimate: 1,
-            estimateUnit: 'hours',
+            priority: TASK_DEFAULTS.priority,
+            estimate: TASK_DEFAULTS.estimate,
+            estimateUnit: TASK_DEFAULTS.estimateUnit,
+            type: TASK_DEFAULTS.type,
+            severity: TASK_DEFAULTS.severity,
+            complexity: TASK_DEFAULTS.complexity,
         },
     });
+
+    const watchType = watch('type');
 
     const onSubmit = async (data: CreateTaskFormData) => {
         await createTask({
@@ -85,11 +97,13 @@ export function CreateTaskDialog({ columnId, trigger }: CreateTaskDialogProps) {
             estimate: data.estimate,
             estimateUnit: data.estimateUnit,
             columnId,
-            type: 'FEATURE'
+            type: data.type || TASK_DEFAULTS.type,
+            severity: data.severity,
+            complexity: data.complexity,
         }, {
             successMessage: "Task created successfully",
             onSuccess: (result) => {
-                const taskData: TaskData = TaskMapper.toTaskData(result)
+                const taskData: TaskData = TaskMapper.toTaskData(result);
                 handleTaskCreated(taskData);
                 setOpen(false);
                 resetForm();
@@ -177,22 +191,63 @@ export function CreateTaskDialog({ columnId, trigger }: CreateTaskDialogProps) {
                                                 value={field.value}
                                                 onValueChange={field.onChange}
                                             >
-                                                <SelectTrigger
-                                                    id="priority"
-                                                >
+                                                <SelectTrigger id="priority">
                                                     <SelectValue placeholder="Select priority" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="LOW">Low</SelectItem>
-                                                    <SelectItem value="MEDIUM">Medium</SelectItem>
-                                                    <SelectItem value="HIGH">High</SelectItem>
-                                                    <SelectItem value="CRITICAL">Critical</SelectItem>
+                                                    <SelectItem value={TaskPrioritiesEnum.LOW}>Low</SelectItem>
+                                                    <SelectItem value={TaskPrioritiesEnum.MEDIUM}>Medium</SelectItem>
+                                                    <SelectItem value={TaskPrioritiesEnum.HIGH}>High</SelectItem>
+                                                    <SelectItem value={TaskPrioritiesEnum.CRITICAL}>Critical</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         )}
                                     />
                                 </FieldContent>
                                 {errors.priority && <FieldError>{errors.priority.message}</FieldError>}
+                            </Field>
+                        </FieldGroup>
+
+                        {/* Task Type Selector */}
+                        <FieldGroup>
+                            <Field>
+                                <FieldLabel htmlFor="type">Task Type</FieldLabel>
+                                <FieldContent>
+                                    <Controller
+                                        name="type"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Select
+                                                disabled={isPending}
+                                                value={field.value}
+                                                onValueChange={(value) => {
+                                                    field.onChange(value);
+                                                    // Reset severity/complexity when type changes
+                                                    if (value === 'FEATURE') {
+                                                        resetField('severity');
+                                                        resetField('complexity', { defaultValue: TaskComplexityEnum.MEDIUM });
+                                                    } else if (value === 'BUG') {
+                                                        resetField('complexity');
+                                                        resetField('severity', { defaultValue: TaskSeverityEnum.MAJOR });
+                                                    } else {
+                                                        resetField('severity');
+                                                        resetField('complexity');
+                                                    }
+                                                }}
+                                            >
+                                                <SelectTrigger id="type">
+                                                    <SelectValue placeholder="Select task type" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value={TaskTypesEnum.FEATURE}>Feature</SelectItem>
+                                                    <SelectItem value={TaskTypesEnum.BUG}>Bug</SelectItem>
+                                                    <SelectItem value={TaskTypesEnum.EPIC}>Epic</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                </FieldContent>
+                                {errors.type && <FieldError>{errors.type.message}</FieldError>}
                             </Field>
                         </FieldGroup>
 
@@ -228,14 +283,12 @@ export function CreateTaskDialog({ columnId, trigger }: CreateTaskDialogProps) {
                                                     value={field.value}
                                                     onValueChange={field.onChange}
                                                 >
-                                                    <SelectTrigger
-                                                        id="estimateUnit"
-                                                    >
+                                                    <SelectTrigger id="estimateUnit">
                                                         <SelectValue placeholder="Select unit" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="hours">Hours</SelectItem>
-                                                        <SelectItem value="days">Days</SelectItem>
+                                                        <SelectItem value={TaskEstimateUnitEnum.HOURS}>Hours</SelectItem>
+                                                        <SelectItem value={TaskEstimateUnitEnum.DAYS}>Days</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             )}
@@ -245,6 +298,70 @@ export function CreateTaskDialog({ columnId, trigger }: CreateTaskDialogProps) {
                                 </Field>
                             </FieldGroup>
                         </div>
+
+                        {/* Conditional: Severity for BUG */}
+                        {watchType === 'BUG' && (
+                            <FieldGroup>
+                                <Field>
+                                    <FieldLabel htmlFor="severity">Severity</FieldLabel>
+                                    <FieldContent>
+                                        <Controller
+                                            name="severity"
+                                            control={control}
+                                            render={({ field }) => (
+                                                <Select
+                                                    disabled={isPending}
+                                                    value={field.value}
+                                                    onValueChange={field.onChange}
+                                                >
+                                                    <SelectTrigger id="severity">
+                                                        <SelectValue placeholder="Select severity" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value={TaskSeverityEnum.MINOR}>Minor</SelectItem>
+                                                        <SelectItem value={TaskSeverityEnum.MAJOR}>Major</SelectItem>
+                                                        <SelectItem value={TaskSeverityEnum.CRITICAL}>Critical</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                        />
+                                    </FieldContent>
+                                    {errors.severity && <FieldError>{errors.severity.message}</FieldError>}
+                                </Field>
+                            </FieldGroup>
+                        )}
+
+                        {/* ✅ Conditional: Complexity for FEATURE */}
+                        {watchType === 'FEATURE' && (
+                            <FieldGroup>
+                                <Field>
+                                    <FieldLabel htmlFor="complexity">Complexity</FieldLabel>
+                                    <FieldContent>
+                                        <Controller
+                                            name="complexity"
+                                            control={control}
+                                            render={({ field }) => (
+                                                <Select
+                                                    disabled={isPending}
+                                                    value={field.value}
+                                                    onValueChange={field.onChange}
+                                                >
+                                                    <SelectTrigger id="complexity">
+                                                        <SelectValue placeholder="Select complexity" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value={TaskComplexityEnum.LOW}>Low</SelectItem>
+                                                        <SelectItem value={TaskComplexityEnum.MEDIUM}>Medium</SelectItem>
+                                                        <SelectItem value={TaskComplexityEnum.HIGH}>High</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                        />
+                                    </FieldContent>
+                                    {errors.complexity && <FieldError>{errors.complexity.message}</FieldError>}
+                                </Field>
+                            </FieldGroup>
+                        )}
                     </div>
                     <DialogFooter>
                         <DialogClose asChild>

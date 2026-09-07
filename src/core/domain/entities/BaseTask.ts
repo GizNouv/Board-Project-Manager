@@ -5,6 +5,7 @@ import { Priority } from '../value-objects/Priority';
 import { Estimate } from '../value-objects/Estimate';
 import { ValidationException } from '../exceptions/BaseExceptions';
 import { TaskCreatedEvent } from '../events/TaskEvents';
+import { TaskType } from '@/types';
 
 export abstract class BaseTask extends Entity<TaskId> {
   private _title: string;
@@ -94,5 +95,5 @@ export abstract class BaseTask extends Entity<TaskId> {
   public abstract calculateStoryPoints(): number;
   public abstract canMoveTo(columnTitle: string): boolean;
   public abstract badgeColor(): string;
-  public abstract get type(): string;
+  public abstract get type(): TaskType;
 }

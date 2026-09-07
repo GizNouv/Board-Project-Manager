@@ -1,7 +1,9 @@
 import { BaseSpecification } from './ISpecification';
 import { BaseTask } from '../entities/BaseTask';
 import { Column } from '../entities/Column';
-import { PriorityLevel, Priority } from '../value-objects/Priority';
+import { Priority } from '../value-objects/Priority';
+import type { Priority as SharedPriority } from '@/types/shared/task';
+import { PRIORITIES, TaskPrioritiesEnum } from '@/types/shared/task';
 import { Estimate } from '../value-objects/Estimate';
 
 /**
@@ -43,15 +45,15 @@ export class EstimateRangeSpecification extends BaseSpecification<Estimate> {
  * Specification for priority change validation
  */
 export class PriorityChangeSpecification extends BaseSpecification<Priority> {
-  private readonly maxPriority: PriorityLevel;
+  private readonly maxPriority: SharedPriority;
 
-  constructor(maxPriority: PriorityLevel = PriorityLevel.CRITICAL) {
+  constructor(maxPriority: SharedPriority = TaskPrioritiesEnum.CRITICAL) {
     super();
     this.maxPriority = maxPriority;
   }
 
   public isSatisfiedBy(priority: Priority): boolean {
-    const order = [PriorityLevel.LOW, PriorityLevel.MEDIUM, PriorityLevel.HIGH, PriorityLevel.CRITICAL];
+    const order = PRIORITIES;
     const maxIndex = order.indexOf(this.maxPriority);
     const currentIndex = order.indexOf(priority.value);
     return currentIndex <= maxIndex;

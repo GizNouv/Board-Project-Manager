@@ -7,13 +7,13 @@ import {
   TaskId,
   UserId,
   Priority,
-  PriorityLevel,
   Estimate,
   TaskFactory,
-  TaskType
 } from '../../domain';
 import { ValidationException } from '../../domain/exceptions';
+import type { Complexity, EstimateUnit, Severity, Priority as SharedPriority } from '@/types/shared/task';
 import { Mapper } from './Mapper';
+import { TASK_DEFAULTS } from '@/constants/task-defaults';
 
 type PrismaTaskWithRelations = PrismaTask & {
   assignee?: { id: string } | null;
@@ -30,8 +30,8 @@ export class TaskMapper implements Mapper<BaseTask, PrismaTaskWithRelations> {
   public toDomain(prismaTask: PrismaTaskWithRelations): BaseTask {
     const taskId = new TaskId(prismaTask.id);
     const assigneeId = prismaTask.assignee ? new UserId(prismaTask.assignee.id) : null;
-    const priority = new Priority(prismaTask.priority as PriorityLevel);
-    const estimate = new Estimate(prismaTask.estimate, prismaTask.estimateUnit as 'hours' | 'days');
+    const priority = new Priority(prismaTask.priority as SharedPriority);
+    const estimate = new Estimate(prismaTask.estimate, prismaTask.estimateUnit as EstimateUnit);
 
     switch (prismaTask.type) {
       case PrismaTaskType.BUG:
@@ -42,7 +42,7 @@ export class TaskMapper implements Mapper<BaseTask, PrismaTaskWithRelations> {
           estimate,
           priority,
           assigneeId,
-          (prismaTask.severity as 'minor' | 'major' | 'critical') || 'major'
+          (prismaTask.severity as Severity) || TASK_DEFAULTS.severity
         );
 
       case PrismaTaskType.FEATURE:
@@ -53,7 +53,7 @@ export class TaskMapper implements Mapper<BaseTask, PrismaTaskWithRelations> {
           estimate,
           priority,
           assigneeId,
-          (prismaTask.complexity as 'low' | 'medium' | 'high') || 'medium'
+          (prismaTask.complexity as Complexity) || TASK_DEFAULTS.complexity
         );
 
       case PrismaTaskType.EPIC:

@@ -9,7 +9,7 @@ export { Board } from './entities/Board';
 export { User } from './entities/User';
 
 // Value Objects
-export { Priority, PriorityLevel } from './value-objects/Priority';
+export { Priority } from './value-objects/Priority';
 export { Estimate } from './value-objects/Estimate';
 export { TaskId } from './value-objects/TaskId';
 export { UserId } from './value-objects/UserId';
@@ -69,7 +69,7 @@ export { BoardManager } from './managers/BoardManager';
 export { ColumnManager } from './managers/ColumnManager';
 
 // Factories
-export { TaskFactory, TaskType, type TaskCreationParams } from './factories/TaskFactory';
+export { TaskFactory, type TaskCreationParams } from './factories/TaskFactory';
 
 // Validators
 export { DomainValidator } from './validators/DomainValidator';

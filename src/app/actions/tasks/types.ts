@@ -1,22 +1,12 @@
 import { z } from 'zod';
+import { TASK_TYPES, PRIORITIES, ESTIMATE_UNITS, SEVERITIES, COMPLEXITIES, type TaskType, type Priority, type EstimateUnit, type Severity, type Complexity, TaskTitle, TaskDescription, EstimateValue, TaskDTOFields } from '@/types/shared/task';
+import { TASK_DEFAULTS } from '@/constants/task-defaults';
 
 // ============================================================
 // DTOs
 // ============================================================
 
-export interface TaskDTO {
-  id: string;
-  title: string;
-  description: string;
-  priority: string;
-  estimate: number;
-  estimateUnit: string;
-  type: string;
-  assigneeId: string | null;
-  columnId: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export interface TaskDTO extends TaskDTOFields {}
 
 // ============================================================
 // Schemas
@@ -25,11 +15,13 @@ export interface TaskDTO {
 export const createTaskSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200).trim(),
   description: z.string().optional().default(''),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
+  priority: z.enum(PRIORITIES),
   estimate: z.number().min(0, 'Estimate must be positive'),
-  estimateUnit: z.enum(['hours', 'days']),
+  estimateUnit: z.enum(ESTIMATE_UNITS),
   columnId: z.string().min(1, 'Column ID is required'),
-  type: z.enum(['FEATURE', 'BUG', 'EPIC']).default('FEATURE'),
+  type: z.enum(TASK_TYPES).default(TASK_DEFAULTS.type),
+  severity: z.enum(SEVERITIES).optional(),
+  complexity: z.enum(COMPLEXITIES).optional(),
 });
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
@@ -39,14 +31,15 @@ export const updateTaskSchema = z.object({
   columnId: z.string().min(1, 'Column ID is required'),
   title: z.string().min(1).max(200).trim().optional(),
   description: z.string().optional(),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
+  priority: z.enum(PRIORITIES).optional(),
   estimate: z.object({
     value: z.number().min(0),
-    unit: z.enum(['hours', 'days']).optional(),
+    unit: z.enum(ESTIMATE_UNITS).optional(),
   }).optional(),
-  severity: z.enum(['minor', 'major', 'critical']).optional(),
-  complexity: z.enum(['low', 'medium', 'high']).optional(),
+  severity: z.enum(SEVERITIES).optional(),
+  complexity: z.enum(COMPLEXITIES).optional(),
   assigneeId: z.string().nullable().optional(),
+  type: z.enum(TASK_TYPES).optional(),
 });
 
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;

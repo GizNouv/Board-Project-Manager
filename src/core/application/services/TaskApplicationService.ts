@@ -1,9 +1,9 @@
+import { TASK_DEFAULTS } from '@/constants/task-defaults';
 import {
   ITaskRepository,
   IColumnRepository,
   IBoardRepository,
   TaskFactory,
-  TaskType,
   TaskId,
   ColumnId,
   BoardId,
@@ -14,7 +14,9 @@ import {
   DomainException,
   EntityNotFoundException,
   ValidationException,
-  DuplicateEntityException
+  DuplicateEntityException,
+  BugTask,
+  FeatureTask
 } from '../../domain';
 import { CreateTaskDTO, UpdateTaskDTO, MoveTaskDTO, ReorderTaskDTO } from '../dto/TaskDTOs';
 
@@ -52,12 +54,15 @@ export class TaskApplicationService {
     console.log('  Column found:', column.id.toString(), column.title, 'tasks:', column.tasks.length);
 
     const task = TaskFactory.createTask(
-      dto.type.toLowerCase() as TaskType,
+      dto.type,
       {
+        id: crypto.randomUUID(),
         title: dto.title,
         description: dto.description,
         estimate: dto.estimate,
         priority: dto.priority,
+        type: dto.type,
+        columnId: dto.columnId,
         assigneeId: dto.assigneeId,
         severity: dto.severity,
         complexity: dto.complexity
@@ -97,8 +102,9 @@ export class TaskApplicationService {
       return taskResult;
     }
 
-    const task = taskResult.value;
+    let task = taskResult.value;
 
+    // Update basic fields
     if (dto.title !== undefined) {
       task.updateTitle(dto.title);
     }
@@ -109,7 +115,7 @@ export class TaskApplicationService {
 
     if (dto.estimate) {
       const { Estimate } = require('../../domain');
-      const estimate = new Estimate(dto.estimate.value, dto.estimate.unit || 'hours');
+      const estimate = new Estimate(dto.estimate.value, dto.estimate.unit || TASK_DEFAULTS.estimateUnit);
       task.updateEstimate(estimate);
     }
 
@@ -124,6 +130,48 @@ export class TaskApplicationService {
         task.assignTo(new UserId(dto.assigneeId));
       } else {
         task.unassign();
+      }
+    }
+
+    // Handle type, severity, complexity changes
+    const currentType = task.type.toUpperCase();
+    const shouldChangeType = dto.type !== undefined && dto.type !== currentType;
+
+    if (shouldChangeType) {
+      const { TaskFactory, TaskType } = require('../../domain');
+
+      // Build params with ALL required fields
+      const params: any = {
+        id: id,  // ← Keep original ID
+        title: task.title,
+        description: task.description,
+        estimate: {
+          value: task.estimate.value,
+          unit: task.estimate.unit,
+        },
+        priority: task.priority.value,
+        assigneeId: task.assigneeId?.toString(),
+      };
+
+      // Only add relevant fields based on the NEW type
+      if (dto.type === 'BUG') {
+        params.severity = dto.severity !== undefined ? dto.severity : (task as any).severity || TASK_DEFAULTS.severity;
+      } else if (dto.type === 'FEATURE') {
+        params.complexity = dto.complexity !== undefined ? dto.complexity : (task as any).complexity || TASK_DEFAULTS.complexity;
+      }
+      // For EPIC: no extra fields
+
+      task = TaskFactory.createTask(
+        dto.type!,
+        params
+      );
+    } else {
+      // If type didn't change, update severity/complexity
+      if (dto.severity !== undefined && task instanceof BugTask) {
+        (task as BugTask).updateSeverity(dto.severity);
+      }
+      if (dto.complexity !== undefined && task instanceof FeatureTask) {
+        (task as FeatureTask).updateComplexity(dto.complexity);
       }
     }
 
