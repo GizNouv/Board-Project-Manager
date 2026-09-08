@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface DashboardClientProps {
-    board: BoardData;
+    board: BoardData | undefined;
     userName: string;
 }
 
@@ -46,7 +46,7 @@ const navigationCards: NavigationCards[] = [
         id: NavigationCardsIds.RecentBoard,
         title: "Recent Tasks",
         description: "Track your recent activity",
-        href: (boardId) => ROUTES.board(boardId ?? ''),
+        href: (boardId) => boardId ? ROUTES.board(boardId) : ROUTES.boards,
         icon: ListTodo,
         isFeatureAvailable: true
     },
@@ -80,7 +80,7 @@ export function DashboardClient({ board: initialBoard, userName }: DashboardClie
                             <Card
                                 key={card.id}
                                 className='cursor-pointer hover:bg-muted/80 transition-colors *:flex-1! group'
-                                onClick={() => push(card.href(card.id === NavigationCardsIds.RecentBoard ? initialBoard.id : undefined))}
+                                onClick={() => push(card.href((card.id === NavigationCardsIds.RecentBoard) && initialBoard ? initialBoard.id : undefined))}
                             >
                                 <CardHeader>
                                     <card.icon className='size-12 md:size-16!' />
@@ -89,9 +89,14 @@ export function DashboardClient({ board: initialBoard, userName }: DashboardClie
                                     <h2 className='text-xl font-bold'>{card.title}</h2>
                                     <p className='text-base text-muted-foreground'>{card.description}</p>
                                 </CardContent>
-                                <CardFooter className={cn('justify-end', !card.isFeatureAvailable && 'justify-between')}>
-                                    {!card.isFeatureAvailable && <Badge>Will Be Available Soon</Badge>}
-                                    <ArrowRightCircle size={32} className='opacity-80' />
+                                <CardFooter className={'justify-between gap-2'}>
+                                    <div className='flex-1'>
+                                        {!initialBoard?.id && (card.id === NavigationCardsIds.RecentBoard) && <Badge>There Is No Board, Create One!</Badge>}
+                                        {!card.isFeatureAvailable && <Badge>Will Be Available Soon</Badge>}
+                                    </div>
+                                    <div className='flex-1 justify-end flex'>
+                                        <ArrowRightCircle size={32} className='opacity-80' />
+                                    </div>
                                 </CardFooter>
                             </Card>
                         )
