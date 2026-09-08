@@ -1,7 +1,7 @@
 import { requireUser } from '@/lib/session';
 import { DashboardClient } from './DashboardClient';
 import { container } from '@/lib/di/container';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { BoardMapper } from '@/lib/mappers';
 
 export default async function DashboardPage() {
@@ -10,6 +10,12 @@ export default async function DashboardPage() {
   // ✅ Use DI Container
   const boardService = container.getBoardService();
   const boardResult = await boardService.getFirstBoardByUser(user.id);
+
+  if (boardResult.isFailure()) {
+    // User has no boards - redirect to create one
+    return <DashboardClient board={undefined} userName={user.name} />;
+    // redirect('/boards');
+  }
 
   if (boardResult.value.ownerId.toString() !== user.id) {
     notFound();
