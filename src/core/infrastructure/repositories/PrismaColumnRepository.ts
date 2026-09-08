@@ -174,20 +174,22 @@ export class PrismaColumnRepository implements IColumnRepository {
         desired.splice(newOrder, 0, moved);
 
         // 6. Phase 1: Stage all columns to unique high values
-        for (let i = 0; i < desired.length; i++) {
-          await tx.column.update({
-            where: { id: desired[i].id },
+        const stagingPromises = desired.map((c, i) =>
+          tx.column.update({
+            where: { id: c.id },
             data: { order: i + STAGING_OFFSET }
-          });
-        }
+          })
+        );
+        await Promise.all(stagingPromises);
 
         // 7. Phase 2: Finalize to 0..n-1
-        for (let i = 0; i < desired.length; i++) {
-          await tx.column.update({
-            where: { id: desired[i].id },
+        const finalPromises = desired.map((c, i) =>
+          tx.column.update({
+            where: { id: c.id },
             data: { order: i }
-          });
-        }
+          })
+        );
+        await Promise.all(finalPromises);
       });
 
       return ResultFactory.success(undefined);
