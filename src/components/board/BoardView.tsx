@@ -291,7 +291,7 @@ export function BoardView({
         nextColumns.map((col) => col.id)
       );
 
-            await reorderColumns(
+      await reorderColumns(
         {
           boardId,
           columnId: movedColumnId,
@@ -452,34 +452,35 @@ export function BoardView({
           );
           return;
         }
-
-                await moveTask(
-          {
-            taskId,
-            sourceColumnId,
-            targetColumnId: destinationColumn.id,
-            targetOrder: finalIndex,
-            sourceTaskIds,
-            targetTaskIds,
-          },
-          {
-            successMessage: "Task moved",
-            onSuccess: () => {
-              console.log('[DND] ✅ Cross-column move persisted');
-              previousColumnsRef.current = null;
-              taskDragSessionRef.current = null;
+        setTimeout(() => {
+          moveTask(
+            {
+              taskId,
+              sourceColumnId,
+              targetColumnId: destinationColumn.id,
+              targetOrder: finalIndex,
+              sourceTaskIds,
+              targetTaskIds,
             },
-            onError: (message) => {
-              console.error('[DND] ❌ Cross-column move failed', message);
-              setColumns(
-                columnsArrayToRecord(previousColumns),
-                previousColumns.map((col) => col.id)
-              );
-              previousColumnsRef.current = null;
-              taskDragSessionRef.current = null;
-            },
-          }
-        );
+            {
+              successMessage: "Task moved",
+              onSuccess: () => {
+                console.log('[DND] ✅ Cross-column move persisted');
+                previousColumnsRef.current = null;
+                taskDragSessionRef.current = null;
+              },
+              onError: (message) => {
+                console.error('[DND] ❌ Cross-column move failed', message);
+                setColumns(
+                  columnsArrayToRecord(previousColumns),
+                  previousColumns.map((col) => col.id)
+                );
+                previousColumnsRef.current = null;
+                taskDragSessionRef.current = null;
+              },
+            }
+          );
+        }, 0);
 
         return;
       }
@@ -543,7 +544,7 @@ export function BoardView({
         nextColumns.map((col) => col.id)
       );
 
-            await reorderTasks(
+      await reorderTasks(
         {
           columnId: destinationColumn.id,
           orderedTaskIds: taskList.map((task) => task.id),
