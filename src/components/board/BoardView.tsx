@@ -3,22 +3,12 @@
 import { useCallback, useRef } from 'react';
 import { DragDropProvider, DragOverlay } from '@dnd-kit/react';
 import { isSortable } from '@dnd-kit/react/sortable';
-
 import { SortableColumn } from './SortableColumn';
-
 import { ColumnData } from '@/types/kanban';
-
-import {
-  reorderColumnsAction,
-  moveTaskAction,
-  reorderTasksAction
-} from '@/app/actions';
-
 import { useBoardStore } from '@/stores/boardStore';
-
 import { cn } from '@/lib/utils';
 import { AutoScroller } from '@dnd-kit/dom';
-import { useAction } from '@/hooks/use-action';
+import { useDndAction } from '@/hooks/useDndAction';
 
 interface BoardViewProps {
   className?: string;
@@ -34,10 +24,26 @@ export function BoardView({
   className,
 }: BoardViewProps) {
 
-  // useAction for mutations
-  const { execute: reorderColumns } = useAction(reorderColumnsAction);
-  const { execute: moveTask } = useAction(moveTaskAction);
-  const { execute: reorderTasks } = useAction(reorderTasksAction);
+  // Use fetch-based DnD actions (non-blocking)
+  const { execute: reorderColumns } = useDndAction<{
+    boardId: string;
+    columnId: string;
+    newOrder: number;
+  }, void>('/api/boards/reorder-columns');
+
+  const { execute: moveTask } = useDndAction<{
+    taskId: string;
+    sourceColumnId: string;
+    targetColumnId: string;
+    targetOrder: number;
+    sourceTaskIds: string[];
+    targetTaskIds: string[];
+  }, void>('/api/tasks/move');
+
+  const { execute: reorderTasks } = useDndAction<{
+    columnId: string;
+    orderedTaskIds: string[];
+  }, void>('/api/tasks/reorder');
 
   // State from store
   const columns = useBoardStore((state) => state.columns);
@@ -67,9 +73,12 @@ export function BoardView({
   );
 
   /**
-   * Snapshot of the board BEFORE the drag.
+   * Separate rollback snapshots for each operation type.
+   * This prevents concurrent operations from interfering with each other.
    */
-  const previousColumnsRef = useRef<ColumnData[] | null>(null);
+  const columnReorderSnapshotRef = useRef<ColumnData[] | null>(null);
+  const taskMoveSnapshotRef = useRef<ColumnData[] | null>(null);
+  const taskReorderSnapshotRef = useRef<ColumnData[] | null>(null);
 
   /**
    * Information about the task at the moment drag started.
@@ -99,7 +108,7 @@ export function BoardView({
     }
 
     if (source.type === 'column') {
-      previousColumnsRef.current = structuredClone(
+      columnReorderSnapshotRef.current = structuredClone(
         Object.values(useBoardStore.getState().columns)
       );
       taskDragSessionRef.current = null;
@@ -134,7 +143,7 @@ export function BoardView({
       return;
     }
 
-    previousColumnsRef.current = structuredClone(currentColumns);
+    taskMoveSnapshotRef.current = structuredClone(currentColumns);
     taskDragSessionRef.current = {
       taskId,
       sourceColumnId: sourceColumn.id,
@@ -235,20 +244,20 @@ export function BoardView({
 
     // ---- CANCELLED DRAG ----
     if (event.canceled) {
-      if (previousColumnsRef.current) {
+      if (columnReorderSnapshotRef.current) {
         setColumns(
-          columnsArrayToRecord(previousColumnsRef.current),
-          previousColumnsRef.current.map((col) => col.id)
+          columnsArrayToRecord(columnReorderSnapshotRef.current),
+          columnReorderSnapshotRef.current.map((col) => col.id)
         );
       }
 
-      previousColumnsRef.current = null;
+      columnReorderSnapshotRef.current = null;
       taskDragSessionRef.current = null;
       return;
     }
 
     if (!isSortable(source)) {
-      previousColumnsRef.current = null;
+      columnReorderSnapshotRef.current = null;
       taskDragSessionRef.current = null;
       return;
     }
@@ -263,24 +272,24 @@ export function BoardView({
         finalIndex == null ||
         initialIndex === finalIndex
       ) {
-        previousColumnsRef.current = null;
+        columnReorderSnapshotRef.current = null;
         return;
       }
 
       const currentColumns = Object.values(useBoardStore.getState().columns);
       const previousColumns =
-        previousColumnsRef.current ?? structuredClone(currentColumns);
+        columnReorderSnapshotRef.current ?? structuredClone(currentColumns);
 
       const movedColumnId = currentColumns[initialIndex]?.id;
       if (!movedColumnId) {
-        previousColumnsRef.current = null;
+        columnReorderSnapshotRef.current = null;
         return;
       }
 
       const nextColumns = [...currentColumns];
       const [movedColumn] = nextColumns.splice(initialIndex, 1);
       if (!movedColumn) {
-        previousColumnsRef.current = null;
+        columnReorderSnapshotRef.current = null;
         return;
       }
 
@@ -291,7 +300,8 @@ export function BoardView({
         nextColumns.map((col) => col.id)
       );
 
-      await reorderColumns(
+      // Fire-and-forget: non-blocking fetch call
+      reorderColumns(
         {
           boardId,
           columnId: movedColumnId,
@@ -300,7 +310,7 @@ export function BoardView({
         {
           successMessage: "Column reordered",
           onSuccess: () => {
-            previousColumnsRef.current = null;
+            columnReorderSnapshotRef.current = null;
           },
           onError: (message) => {
             setColumns(
@@ -308,7 +318,7 @@ export function BoardView({
               previousColumns.map((col) => col.id)
             );
             console.error('[DND] ❌ Column reorder failed', message);
-            previousColumnsRef.current = null;
+            columnReorderSnapshotRef.current = null;
           },
         }
       );
@@ -318,7 +328,7 @@ export function BoardView({
 
     // ---- TASK MOVE / REORDER ----
     if (source.type !== 'task') {
-      previousColumnsRef.current = null;
+      columnReorderSnapshotRef.current = null;
       taskDragSessionRef.current = null;
       return;
     }
@@ -327,7 +337,7 @@ export function BoardView({
 
     if (!dragSession) {
       console.error('[DND] ❌ Missing task drag session');
-      previousColumnsRef.current = null;
+      taskMoveSnapshotRef.current = null;
       return;
     }
 
@@ -335,7 +345,7 @@ export function BoardView({
 
     const currentColumns = Object.values(useBoardStore.getState().columns);
     const previousColumns =
-      previousColumnsRef.current ?? structuredClone(currentColumns);
+      taskMoveSnapshotRef.current ?? structuredClone(currentColumns);
 
     // Find destination column
     const destinationColumn = currentColumns.find((column) =>
@@ -348,7 +358,7 @@ export function BoardView({
         columnsArrayToRecord(previousColumns),
         previousColumns.map((col) => col.id)
       );
-      previousColumnsRef.current = null;
+      taskMoveSnapshotRef.current = null;
       taskDragSessionRef.current = null;
       return;
     }
@@ -366,7 +376,7 @@ export function BoardView({
         columnsArrayToRecord(previousColumns),
         previousColumns.map((col) => col.id)
       );
-      previousColumnsRef.current = null;
+      taskMoveSnapshotRef.current = null;
       taskDragSessionRef.current = null;
       return;
     }
@@ -392,7 +402,7 @@ export function BoardView({
         columnsArrayToRecord(previousColumns),
         previousColumns.map((col) => col.id)
       );
-      previousColumnsRef.current = null;
+      taskMoveSnapshotRef.current = null;
       taskDragSessionRef.current = null;
       return;
     }
@@ -452,35 +462,35 @@ export function BoardView({
           );
           return;
         }
-        setTimeout(() => {
-          moveTask(
-            {
-              taskId,
-              sourceColumnId,
-              targetColumnId: destinationColumn.id,
-              targetOrder: finalIndex,
-              sourceTaskIds,
-              targetTaskIds,
+
+        // Fire-and-forget: non-blocking fetch call
+        moveTask(
+          {
+            taskId,
+            sourceColumnId,
+            targetColumnId: destinationColumn.id,
+            targetOrder: finalIndex,
+            sourceTaskIds,
+            targetTaskIds,
+          },
+          {
+            successMessage: "Task moved",
+            onSuccess: () => {
+              console.log('[DND] ✅ Cross-column move persisted');
+              taskMoveSnapshotRef.current = null;
+              taskDragSessionRef.current = null;
             },
-            {
-              successMessage: "Task moved",
-              onSuccess: () => {
-                console.log('[DND] ✅ Cross-column move persisted');
-                previousColumnsRef.current = null;
-                taskDragSessionRef.current = null;
-              },
-              onError: (message) => {
-                console.error('[DND] ❌ Cross-column move failed', message);
-                setColumns(
-                  columnsArrayToRecord(previousColumns),
-                  previousColumns.map((col) => col.id)
-                );
-                previousColumnsRef.current = null;
-                taskDragSessionRef.current = null;
-              },
-            }
-          );
-        }, 0);
+            onError: (message) => {
+              console.error('[DND] ❌ Cross-column move failed', message);
+              setColumns(
+                columnsArrayToRecord(previousColumns),
+                previousColumns.map((col) => col.id)
+              );
+              taskMoveSnapshotRef.current = null;
+              taskDragSessionRef.current = null;
+            },
+          }
+        );
 
         return;
       }
@@ -488,7 +498,7 @@ export function BoardView({
       // ---- SAME-COLUMN REORDER ----
       if (sourceIndex === finalIndex) {
         console.log('[DND] Same position - nothing to persist');
-        previousColumnsRef.current = null;
+        taskReorderSnapshotRef.current = null;
         taskDragSessionRef.current = null;
         return;
       }
@@ -502,7 +512,7 @@ export function BoardView({
           columnsArrayToRecord(previousColumns),
           previousColumns.map((col) => col.id)
         );
-        previousColumnsRef.current = null;
+        taskReorderSnapshotRef.current = null;
         taskDragSessionRef.current = null;
         return;
       }
@@ -520,7 +530,7 @@ export function BoardView({
           columnsArrayToRecord(previousColumns),
           previousColumns.map((col) => col.id)
         );
-        previousColumnsRef.current = null;
+        taskReorderSnapshotRef.current = null;
         taskDragSessionRef.current = null;
         return;
       }
@@ -531,7 +541,7 @@ export function BoardView({
           columnsArrayToRecord(previousColumns),
           previousColumns.map((col) => col.id)
         );
-        previousColumnsRef.current = null;
+        taskReorderSnapshotRef.current = null;
         taskDragSessionRef.current = null;
         return;
       }
@@ -544,7 +554,8 @@ export function BoardView({
         nextColumns.map((col) => col.id)
       );
 
-      await reorderTasks(
+      // Fire-and-forget: non-blocking fetch call
+      reorderTasks(
         {
           columnId: destinationColumn.id,
           orderedTaskIds: taskList.map((task) => task.id),
@@ -553,7 +564,7 @@ export function BoardView({
           successMessage: "Tasks reordered",
           onSuccess: () => {
             console.log('[DND] ✅ Task reorder persisted');
-            previousColumnsRef.current = null;
+            taskReorderSnapshotRef.current = null;
             taskDragSessionRef.current = null;
           },
           onError: (message) => {
@@ -562,7 +573,7 @@ export function BoardView({
               columnsArrayToRecord(previousColumns),
               previousColumns.map((col) => col.id)
             );
-            previousColumnsRef.current = null;
+            taskReorderSnapshotRef.current = null;
             taskDragSessionRef.current = null;
           },
         }
@@ -574,7 +585,7 @@ export function BoardView({
         previousColumns.map((col) => col.id)
       );
     } finally {
-      previousColumnsRef.current = null;
+      // Clear drag session only, do NOT clear snapshots here (they're cleared in onSuccess/onError)
       taskDragSessionRef.current = null;
     }
   };
