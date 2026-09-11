@@ -19,10 +19,13 @@ export default auth((req) => {
   if (
     isLoggedIn &&
     (req.nextUrl.pathname === ROUTES.login ||
-      req.nextUrl.pathname === ROUTES.register)
+      req.nextUrl.pathname === ROUTES.register ||
+      // check if we are in home page
+      req.nextUrl.pathname.match(/^\/$/)
+    )
   ) {
     return NextResponse.redirect(
-      new URL('/', req.nextUrl)
+      new URL(ROUTES.dashboard, req.nextUrl)
     );
   }
 

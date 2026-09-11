@@ -41,9 +41,10 @@ export function ColumnMenu({ column, onEdit, onDelete, isDeleting = false }: Col
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button
-                        variant="ghost"
+                        variant="outline"
+                        role='button'
                         size="sm"
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <MoreHorizontal className="h-4 w-4" />

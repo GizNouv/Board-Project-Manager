@@ -5,7 +5,9 @@ import { verifyPassword } from '@/lib/password';
 import { ROUTES } from './config/routes';
 
 const protectedRoutes = [
-  ROUTES.home,
+  ROUTES.dashboard,
+  ROUTES.boards,
+  ROUTES.profile,
 ];
 
 export const authConfig: NextAuthConfig = {
@@ -75,7 +77,7 @@ export const authConfig: NextAuthConfig = {
 
       if (isOnLoginPage) {
         if (isLoggedIn) {
-          return Response.redirect(new URL('/', request.nextUrl));
+          return Response.redirect(new URL(ROUTES.dashboard, request.nextUrl));
         }
         return true;
       }
