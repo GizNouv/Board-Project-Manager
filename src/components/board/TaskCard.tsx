@@ -254,8 +254,8 @@ export function TaskCard({ task, className, columnId, isDraggable }: TaskCardPro
                             <div
                                 className={cn(
                                     'shrink-0 -mt-0.5 -mr-1 transition-all duration-200',
-                                    'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100',
-                                    'translate-x-1 group-hover:translate-x-0'
+                                    'md:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100',
+                                    'md:translate-x-1 group-hover:translate-x-0'
                                 )}
                             >
                                 <TaskMenu
