@@ -50,7 +50,7 @@ export function ColumnView({
     });
 
     const handleDelete = async () => {
-                await deleteColumn({
+        await deleteColumn({
             columnId: column.id,
             boardId: boardId,
         }, {
@@ -68,10 +68,13 @@ export function ColumnView({
         >
             <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-medium truncate">
+                        {column.title}
+                    </CardTitle>
                     <div className="flex items-center gap-2 min-w-0">
-                        <CardTitle className="text-sm font-medium truncate">
-                            {column.title}
-                        </CardTitle>
+                        <CardDescription>
+                            {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
+                        </CardDescription>
                         <ColumnMenu
                             column={column}
                             onEdit={() => setEditDialogOpen(true)}
@@ -79,9 +82,6 @@ export function ColumnView({
                             isDeleting={isDeleting}
                         />
                     </div>
-                    <CardDescription>
-                        {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
-                    </CardDescription>
                 </div>
             </CardHeader>
             <div className='max-h-full overflow-y-auto scroll-smooth py-1 scrollbar-thumb-muted-foreground scrollbar-thin scrollbar-track-transparent'>
