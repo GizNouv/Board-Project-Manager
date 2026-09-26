@@ -375,7 +375,7 @@ Future versions may introduce an AI assistant for capabilities such as:
 
 ## Close Look
 
-
+https://github.com/user-attachments/assets/6528045d-e786-4c03-936e-9da30dc36ab3
 
 ---
 
