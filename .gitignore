@@ -33,7 +33,6 @@ yarn-error.log*
 Thumbs.db
 
 # IDE
-.vscode
 .idea
 *.swp
 *.swo
