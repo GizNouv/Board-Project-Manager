@@ -208,7 +208,7 @@ Make sure the following are installed:
 Clone the repository:
 
 ```bash
-git clone <repository-url>
+git clone <https://github.com/GizNouv/Board-Project-Manager.git>
 cd task-board
 ```
 
